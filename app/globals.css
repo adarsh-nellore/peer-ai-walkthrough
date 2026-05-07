@@ -1,28 +1,53 @@
 @import "tailwindcss";
 
 @theme {
-  --color-coral: #FF4E49;
-  --color-coral-soft: #FFF5F4;
-  --color-gold: #FFAF04;
-  --color-gold-soft: #FFF8E5;
-  --color-green: #43DD9C;
-  --color-green-soft: #E6FFF5;
-  --color-pink: #FFE0EC;
-  --color-pink-ink: #FF4488;
-  --color-ink: #1A1B1F;
-  --color-muted: #525252;
-  --color-faint: #858585;
-  --color-hairline: #D5DDE3;
-  --color-soft: #E9E9E9;
+  /* Neutrals — slightly tuned for editorial weight */
+  --color-ink: #0F1115;
+  --color-muted: #5A5E66;
+  --color-faint: #8E939A;
+  --color-hairline: #E5E7EB;
+  --color-soft: #F1F2F4;
   --color-stripe: #FAFBFC;
-  --color-warm: #F5F2ED;
+  --color-warm: #F4F1EB;
 
+  /* Brand + semantic */
+  --color-coral: #FF4E49;
+  --color-coral-soft: #FFF1F0;
+  --color-gold: #F6A600;
+  --color-gold-soft: #FFF7E5;
+  --color-green: #19A875;
+  --color-green-soft: #E6F7EF;
+  --color-pink: #FFD9E5;
+  --color-pink-ink: #C13075;
+
+  /* Fonts */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Inconsolata", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: "Fraunces", "Inter", Georgia, serif;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(15, 17, 21, 0.04), 0 1px 1px rgba(15, 17, 21, 0.02);
+  --shadow-pop: 0 8px 24px -8px rgba(15, 17, 21, 0.12), 0 2px 6px -2px rgba(15, 17, 21, 0.06);
+  --shadow-modal: 0 32px 80px -32px rgba(15, 17, 21, 0.22), 0 12px 28px -12px rgba(15, 17, 21, 0.10);
 }
 
 html, body {
-  background: #f5f2ed;
-  color: #1a1b1f;
+  background: var(--color-warm);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv02";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Hide scrollbars on scrollable internal panels (the chrome owns scroll) */
+.scroll-tame {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 17, 21, 0.16) transparent;
+}
+.scroll-tame::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-tame::-webkit-scrollbar-thumb {
+  background: rgba(15, 17, 21, 0.16);
+  border-radius: 9999px;
+}
+.scroll-tame::-webkit-scrollbar-track { background: transparent; }

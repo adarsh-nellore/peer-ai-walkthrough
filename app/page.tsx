@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { STEPS } from "./steps";
+import { BEATS } from "./beats";
+import { Shell } from "./components/Shell";
 
 const FRAME_W = 1440;
 const FRAME_H = 900;
@@ -23,7 +24,7 @@ export default function Home() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter")
-        setIdx((i) => Math.min(i + 1, STEPS.length - 1));
+        setIdx((i) => Math.min(i + 1, BEATS.length - 1));
       else if (e.key === "ArrowLeft") setIdx((i) => Math.max(i - 1, 0));
       else if (e.key === "Home" || e.key === "r" || e.key === "R") setIdx(0);
     };
@@ -31,11 +32,10 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const step = STEPS[idx];
-  const Screen = step.Component;
+  const beat = BEATS[idx];
 
   return (
-    <main className="relative h-dvh w-dvw overflow-hidden bg-[#f5f2ed]">
+    <main className="relative h-dvh w-dvw overflow-hidden bg-warm">
       <div
         className="absolute left-1/2 top-1/2"
         style={{
@@ -45,9 +45,11 @@ export default function Home() {
           transformOrigin: "center center",
         }}
       >
-        <div key={step.id} className="absolute inset-0">
-          <Screen />
-        </div>
+        <Shell beat={beat} />
+      </div>
+      {/* Tiny beat counter — bottom-left corner, low-opacity */}
+      <div className="pointer-events-none absolute left-4 bottom-3 font-mono text-[10px] tracking-[0.06em] text-ink/40 select-none">
+        {String(idx + 1).padStart(2, "0")} / {String(BEATS.length).padStart(2, "0")}
       </div>
     </main>
   );
