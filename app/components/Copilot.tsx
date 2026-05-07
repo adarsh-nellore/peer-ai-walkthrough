@@ -292,26 +292,30 @@ function SourceChip({ source }: { source: SourceRef }) {
 
 function ExpandedSource({ source }: { source: SourceRef }) {
   if (source.kind === "csv") {
+    const headerCell = "px-3 py-1.5 font-mono uppercase tracking-[0.06em] text-[9.5px] font-bold text-faint";
     return (
       <div className="border-t border-hairline">
-        <div className="px-3 pt-2 pb-2">
+        <div className="px-3 pt-2 pb-1.5">
           <MetaText className="text-faint">rows 412-438 · ALT &gt; 3× ULN</MetaText>
         </div>
-        <div className="grid grid-cols-[1.2fr_0.5fr_0.7fr_1.4fr] divide-y divide-soft text-[11px] border-y border-hairline">
-          <div className="px-3 py-2 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint">ID</div>
-          <div className="px-3 py-2 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint">DAY</div>
-          <div className="px-3 py-2 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint">ALT</div>
-          <div className="px-3 py-2 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint text-right">OUTCOME</div>
+        <div className="border-y border-hairline">
+          <div className="flex items-center bg-stripe">
+            <div className={`flex-[1.2] ${headerCell}`}>ID</div>
+            <div className={`flex-[0.5] ${headerCell}`}>DAY</div>
+            <div className={`flex-[0.7] ${headerCell}`}>ALT</div>
+            <div className={`flex-[1.4] text-right ${headerCell}`}>OUTCOME</div>
+          </div>
           {LFT_PREVIEW.map((r) => {
             const flagged = r.flagged;
-            const cell = `px-3 py-2 ${flagged ? "bg-pink/40 text-pink-ink" : "text-ink"}`;
+            const cell = `px-3 py-1.5 font-mono text-[11px] ${flagged ? "text-pink-ink" : "text-ink"}`;
+            const rowBg = flagged ? "bg-pink/40" : "bg-white";
             return (
-              <>
-                <div key={`${r.id}-id`} className={`${cell} font-mono`}>{r.id}</div>
-                <div key={`${r.id}-d`} className={`${cell} font-mono`}>{r.day}</div>
-                <div key={`${r.id}-a`} className={`${cell} font-mono ${flagged ? "font-bold" : ""}`}>{r.alt}</div>
-                <div key={`${r.id}-o`} className={`${cell} font-mono text-right ${flagged ? "font-bold" : ""}`}>{r.outcome}</div>
-              </>
+              <div key={r.id} className={`flex items-center border-t border-soft ${rowBg}`}>
+                <div className={`flex-[1.2] ${cell}`}>{r.id}</div>
+                <div className={`flex-[0.5] ${cell}`}>{r.day}</div>
+                <div className={`flex-[0.7] ${cell} ${flagged ? "font-semibold" : ""}`}>{r.alt}</div>
+                <div className={`flex-[1.4] text-right ${cell} ${flagged ? "font-semibold" : ""}`}>{r.outcome}</div>
+              </div>
             );
           })}
         </div>

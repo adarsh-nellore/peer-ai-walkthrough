@@ -10,6 +10,7 @@ import {
   SUBGROUP_PARAGRAPH,
   WORDING_VARIANTS,
   PROTOCOL_DEFINITIONS,
+  NARRATIVE_VARIANTS,
 } from "../doc/narratives";
 import { LFT_FULL, LFT_TOTAL } from "../doc/LftListings";
 
@@ -58,22 +59,34 @@ function CsrDocBody({
 
       <Table />
 
-      {/* The committed narrative — shown when no working block (default), or after accept */}
+      {/* The committed narrative — shown when no working block. v3 if accepted, else original. */}
       <AnimatePresence mode="wait">
         {!workingBlock && (
           <motion.div
-            key="committed-narrative"
+            key={`narr-${mode.commitedNarrative ?? "orig"}-${mode.committedEMA ? "ema" : "noema"}`}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="mt-7 flex flex-col gap-5"
           >
-            {ORIGINAL_NARRATIVE_LINES.map((line, i) => (
-              <p key={i} className="text-[15px] leading-[1.65] text-ink">
-                {line}
-              </p>
-            ))}
+            {mode.commitedNarrative === "v3" ? (
+              <motion.p
+                key="v3-narrative"
+                initial={{ backgroundColor: "rgba(246,166,0,0.10)" }}
+                animate={{ backgroundColor: "rgba(246,166,0,0)" }}
+                transition={{ duration: 1.6 }}
+                className="text-[15px] leading-[1.65] text-ink rounded-md"
+              >
+                {NARRATIVE_VARIANTS.v3.body}
+              </motion.p>
+            ) : (
+              ORIGINAL_NARRATIVE_LINES.map((line, i) => (
+                <p key={i} className="text-[15px] leading-[1.65] text-ink">
+                  {line}
+                </p>
+              ))
+            )}
             {mode.committedEMA && (
               <motion.p
                 key="ema-paragraph"
@@ -120,14 +133,12 @@ function Table() {
           Hepatic adverse events by grade and treatment arm
         </span>
       </div>
-      <div className="grid grid-cols-[2fr_1fr_1fr] divide-y divide-hairline">
-        <Row header label="GRADE" v1="AURORA-IV (n=598)" v2="PLACEBO (n=293)" />
-        <Row label="Grade 1 — transient" v1="34  (5.7%)" v2="7  (2.4%)" />
-        <Row stripe label="Grade 2 — moderate ALT↑" v1="13  (2.2%)" v2="4  (1.4%)" />
-        <Row label="Grade 3 — DILI criteria" v1="2  (0.3%)" v2="1  (0.3%)" />
-        <Row stripe muted label="Grade 4" v1="0  (0.0%)" v2="0  (0.0%)" />
-        <Row total label="Total — any grade" v1="49  (8.2%)" v2="12  (4.1%)" />
-      </div>
+      <Row header label="GRADE" v1="AURORA-IV (n=598)" v2="PLACEBO (n=293)" />
+      <Row label="Grade 1 — transient" v1="34  (5.7%)" v2="7  (2.4%)" />
+      <Row stripe label="Grade 2 — moderate ALT↑" v1="13  (2.2%)" v2="4  (1.4%)" />
+      <Row label="Grade 3 — DILI criteria" v1="2  (0.3%)" v2="1  (0.3%)" />
+      <Row stripe muted label="Grade 4" v1="0  (0.0%)" v2="0  (0.0%)" />
+      <Row total label="Total — any grade" v1="49  (8.2%)" v2="12  (4.1%)" />
     </div>
   );
 }
@@ -150,7 +161,12 @@ function Row({
   v2: string;
 }) {
   const cell = "px-5 py-3 text-[14px] leading-[1.4]";
-  const bg = total ? "bg-white border-t-[1.5px] border-ink" : stripe ? "bg-stripe" : "bg-white";
+  const rowBg = stripe ? "bg-stripe" : "bg-white";
+  const rowBorder = total
+    ? "border-t-[1.5px] border-ink"
+    : header
+    ? "border-b border-hairline"
+    : "border-t border-soft";
   const labelClass = total
     ? "font-semibold text-ink"
     : header
@@ -165,11 +181,11 @@ function Row({
     : "font-mono text-ink";
 
   return (
-    <>
-      <div className={`${cell} ${bg} ${labelClass}`}>{label}</div>
-      <div className={`${cell} ${bg} ${numClass} text-right`}>{v1}</div>
-      <div className={`${cell} ${bg} ${numClass} text-right`}>{v2}</div>
-    </>
+    <div className={`flex items-center ${rowBg} ${rowBorder}`}>
+      <div className={`flex-[2] ${cell} ${labelClass}`}>{label}</div>
+      <div className={`flex-1 text-right ${cell} ${numClass}`}>{v1}</div>
+      <div className={`flex-1 text-right ${cell} ${numClass}`}>{v2}</div>
+    </div>
   );
 }
 
@@ -201,12 +217,12 @@ export function CsvListingBody({ split = false }: { split?: boolean }) {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr_0.9fr] divide-y divide-soft text-[12px]">
+      <div className="rounded-[10px] overflow-hidden border border-hairline bg-white">
         <CsvHeader />
         {LFT_FULL.map((r) => (
           <CsvRow key={r.id} row={r} />
         ))}
-        <div className="px-3 py-3 text-faint font-mono col-span-5 border-t border-hairline">…</div>
+        <div className="flex items-center px-4 py-3 text-faint font-mono text-[12px] border-t border-soft">…</div>
       </div>
       <div className="mt-3 flex items-center gap-2">
         <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-faint">
@@ -220,29 +236,30 @@ export function CsvListingBody({ split = false }: { split?: boolean }) {
 }
 
 function CsvHeader() {
-  const cell = "px-3 py-3 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint";
+  const cell = "px-4 py-3 font-mono uppercase tracking-[0.06em] text-[10px] font-bold text-faint";
   return (
-    <>
-      <div className={cell}>PT-ID</div>
-      <div className={cell}>DAY</div>
-      <div className={cell}>ALT (U/L)</div>
-      <div className={cell}>AST (U/L)</div>
-      <div className={cell}>×ULN</div>
-    </>
+    <div className="flex items-center bg-stripe border-b border-hairline">
+      <div className={`flex-[1.5] ${cell}`}>PT-ID</div>
+      <div className={`flex-[0.7] ${cell}`}>DAY</div>
+      <div className={`flex-[0.9] ${cell}`}>ALT (U/L)</div>
+      <div className={`flex-[0.9] ${cell}`}>AST (U/L)</div>
+      <div className={`flex-[0.9] ${cell}`}>×ULN</div>
+    </div>
   );
 }
 
 function CsvRow({ row }: { row: import("../doc/LftListings").LftRow }) {
   const flagged = row.flagged;
-  const cell = `px-3 py-3 ${flagged ? "bg-pink/40 text-pink-ink" : "text-ink"}`;
+  const cell = `px-4 py-3 font-mono text-[13px] ${flagged ? "text-pink-ink" : "text-ink"}`;
+  const rowBg = flagged ? "bg-pink/40" : "bg-white";
   return (
-    <>
-      <div className={`${cell} font-mono`}>{row.id}</div>
-      <div className={`${cell} font-mono`}>{row.day}</div>
-      <div className={`${cell} font-mono ${flagged ? "font-bold" : ""}`}>{row.alt}</div>
-      <div className={`${cell} font-mono`}>{row.ast}</div>
-      <div className={`${cell} font-mono ${flagged ? "font-bold" : ""}`}>{row.uln?.toFixed(1)}</div>
-    </>
+    <div className={`flex items-center border-t border-soft ${rowBg}`}>
+      <div className={`flex-[1.5] ${cell}`}>{row.id}</div>
+      <div className={`flex-[0.7] ${cell}`}>{row.day}</div>
+      <div className={`flex-[0.9] ${cell} ${flagged ? "font-semibold" : ""}`}>{row.alt}</div>
+      <div className={`flex-[0.9] ${cell}`}>{row.ast}</div>
+      <div className={`flex-[0.9] ${cell} ${flagged ? "font-semibold" : ""}`}>{row.uln?.toFixed(1)}</div>
+    </div>
   );
 }
 
