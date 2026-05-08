@@ -28,9 +28,9 @@
   --color-info: #4FA8E4;
   --color-accent-indigo: #4F46E5;
 
-  /* Walkthrough bar + connector — match the floating pill's stroke */
-  --color-walkthrough-line: #DDDAD0;
-  --color-walkthrough-dot: #DDDAD0;
+  /* Walkthrough bar + connector — soft coral guide, dashed */
+  --color-walkthrough-line: rgba(255, 78, 73, 0.42);
+  --color-walkthrough-dot: rgba(255, 78, 73, 0.70);
   --shadow-walkthrough: 0 1px 2px rgba(15, 18, 22, 0.04), 0 12px 32px -12px rgba(15, 18, 22, 0.10);
 
   /* Fonts */
@@ -65,9 +65,17 @@ html, body {
 }
 .scroll-tame::-webkit-scrollbar-track { background: transparent; }
 
-/* Walkthrough spotlight: layout-neutral marker; chip + connector do the pointing. */
+/* Walkthrough spotlight: a soft, faint blue glow + thin edge ring on the
+   focused component itself. Always respects the element's own border-radius
+   (box-shadow does this automatically). No outline, no offset — the element
+   simply gets a quietly-emphasized appearance. */
 .walkthrough-spotlight {
   position: relative;
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.34),
+    0 0 0 6px rgba(96, 165, 250, 0.10),
+    0 10px 28px -8px rgba(96, 165, 250, 0.22);
+  transition: box-shadow 320ms ease-out;
 }
 
 /* Gradient hairline for soft horizontal dividers (e.g., copilot rail header) */
@@ -75,3 +83,4 @@ html, body {
   height: 1px;
   background: linear-gradient(to right, transparent 0%, var(--color-hairline) 12%, var(--color-hairline) 88%, transparent 100%);
 }
+

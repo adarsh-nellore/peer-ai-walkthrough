@@ -102,10 +102,12 @@ type AcceptedChip = { label: string; revisit?: boolean };
 
 type WalkthroughFocus =
   | "chrome"
+  | "copilot-thread"
   | "copilot-clarify"
   | "copilot-reasoning"
   | "copilot-narrative-preview"
   | "editor-narrative"
+  | "editor-tertiary"
   | "evidence-csv"
   | "split-view"
   | "tertiary-wording"
@@ -1422,22 +1424,22 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       lead: "",
       active:
         "User prompts Peer while drafting a CSR; agent will reason and ask before generating.",
-      focus: "chrome",
+      focus: "copilot-thread",
     };
   }
   if (slide >= 6 && slide <= 13) {
     return {
-      lead: "Pre-draft clarifying questions could",
+      lead: "Pre-draft clarifying questions let",
       active:
-        "narrow the safety narrative toward the medical writer's framing intent, keeping them in the editorial loop.",
+        "the agent narrow the safety narrative toward the medical writer's framing intent, keeping them in the editorial loop.",
       focus: "copilot-clarify",
     };
   }
   if (slide >= 14 && slide <= 21) {
     return {
-      lead: "Reasoning steps that cite the LFT listing rows, protocol section, and prior-phase CSR could",
+      lead: "Reasoning steps that cite the LFT listing rows, protocol section, and prior-phase CSR let",
       active:
-        "let the medical writer audit every claim before sign-off.",
+        "the medical writer audit every claim before sign-off.",
       focus: "copilot-reasoning",
     };
   }
@@ -1451,23 +1453,17 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
   }
   if (slide >= 23 && slide <= 26) {
     return {
-      lead: "Multiple framings of the same hepatic AE narrative could",
+      lead: "Multiple framings of the same hepatic AE narrative let",
       active:
-        "let the medical writer pick conservative, direct, or comparative framing without redrafting from scratch.",
+        "the medical writer pick conservative, direct, or comparative framing without redrafting from scratch.",
       focus: "copilot-narrative-preview",
     };
   }
-  if (slide === 27) {
-    return {
-      lead: "After commit,",
-      active:
-        "the medical writer could re-open the agent's reasoning chain and source evidence at any time.",
-      focus: "editor-narrative",
-    };
-  }
-  if (slide >= 28 && slide <= 31) {
+  if (slide >= 27 && slide <= 31) {
     const focus: WalkthroughFocus =
-      slide === 28
+      slide === 27
+        ? "editor-narrative"
+        : slide === 28
         ? "copilot-reasoning"
         : slide === 29
         ? "evidence-csv"
@@ -1475,9 +1471,9 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
         ? "split-view"
         : "editor-narrative";
     return {
-      lead: "Opening the LFT listing rows behind the draft, side-by-side with §12.4,",
+      lead: "Opening the LFT listing rows behind the draft, side-by-side with §12.4, lets",
       active:
-        "could let the medical writer verify every figure in place.",
+        "the medical writer verify every figure in place.",
       focus,
     };
   }
@@ -1486,7 +1482,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       lead: "Follow-up turn:",
       active:
         "agent reasons across regulatory references for authority-aligned phrasings.",
-      focus: "chrome",
+      focus: "copilot-thread",
     };
   }
   if (slide === 37) {
@@ -1494,14 +1490,14 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       lead: "",
       active:
         "Agent drafts FDA and EMA versions of the §12.4 resolution-time statement.",
-      focus: "copilot-reasoning",
+      focus: "tertiary-wording",
     };
   }
   if (slide === 38) {
     return {
-      lead: "Region-tagged FDA and EMA phrasings of the same fact could",
+      lead: "Region-tagged FDA and EMA phrasings of the same fact let",
       active:
-        "let the medical writer commit once instead of translating between regulators.",
+        "the medical writer commit once instead of translating between regulators.",
       focus: "tertiary-wording",
     };
   }
@@ -1510,14 +1506,14 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       lead: "",
       active:
         "Selected EMA wording lands in §12.4 with the agent's audit trail intact.",
-      focus: "editor-narrative",
+      focus: "editor-tertiary",
     };
   }
   if (slide === 40 || slide === 41) {
     return {
-      lead: "A relational graph of source listings, protocol sections, and roll-up modules",
+      lead: "A relational graph of source listings, protocol sections, and roll-up modules lets",
       active:
-        "could let the medical writer navigate the audit trail by data flow.",
+        "the medical writer navigate the audit trail by data flow.",
       focus: slide === 40 ? "trace-graph" : "protocol-doc",
     };
   }
@@ -1528,7 +1524,31 @@ const FRAME_W = 1440;
 const FRAME_H = 900;
 const TOP_STRIP = 88;
 const SIDE_PAD = 24;
-const MAX_SCALE = 1.0;
+const MAX_SCALE = 0.92;
+
+/** Per-section dwell time for auto-advance (in ms; 1-based slide). */
+function dwellMs(slide: number): number {
+  if (slide === 1) return 3200;
+  if (slide >= 2 && slide <= 4) return 3200;
+  if (slide === 5) return 3800;
+  if (slide >= 6 && slide <= 13) return 3600;
+  if (slide >= 14 && slide <= 21) return 4200;
+  if (slide === 22) return 3200;
+  if (slide >= 23 && slide <= 26) return 5600;
+  if (slide === 27) return 3600;
+  if (slide === 28) return 4400;
+  if (slide === 29) return 4800;
+  if (slide === 30) return 6400;
+  if (slide === 31) return 3600;
+  if (slide >= 32 && slide <= 36) return 3600;
+  if (slide === 37) return 3200;
+  if (slide === 38) return 5600;
+  if (slide === 39) return 3600;
+  if (slide === 40) return 8400;
+  if (slide === 41) return 7000;
+  return 4200;
+}
+
 
 /** White "island" on warm — editor / Copilot / split panes */
 const FLOAT_COL =
@@ -1542,13 +1562,17 @@ export default function PaperFramePage() {
   const [index, setIndex] = useState(0);
   const [scale, setScale] = useState(MAX_SCALE);
   const [walkthroughMode, setWalkthroughMode] = useState(true);
+  const [autoMode, setAutoMode] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const flag = params.get("walkthrough");
-    if (flag === "0" || flag === "false") setWalkthroughMode(false);
-    if (flag === "1" || flag === "true") setWalkthroughMode(true);
+    const wflag = params.get("walkthrough");
+    if (wflag === "0" || wflag === "false") setWalkthroughMode(false);
+    if (wflag === "1" || wflag === "true") setWalkthroughMode(true);
+    const aflag = params.get("auto");
+    if (aflag === "0" || aflag === "false") setAutoMode(false);
+    if (aflag === "1" || aflag === "true") setAutoMode(true);
   }, []);
 
   useEffect(() => {
@@ -1559,17 +1583,48 @@ export default function PaperFramePage() {
         setIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === "w" || e.key === "W") {
         setWalkthroughMode((v) => !v);
+      } else if (e.key === "a" || e.key === "A" || e.key === " ") {
+        e.preventDefault();
+        setAutoMode((v) => !v);
+      } else if (e.key === "Home" || e.key === "r" || e.key === "R") {
+        setIndex(0);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const [remainingMs, setRemainingMs] = useState(0);
+
+  // Auto-advance with per-section dwell. Click-hint flashes intentionally disabled.
+  useEffect(() => {
+    if (!autoMode) {
+      setRemainingMs(0);
+      return;
+    }
+    const slide = index + 1;
+    const dwell = dwellMs(slide);
+    setRemainingMs(dwell);
+    const startedAt = performance.now();
+    const tick = window.setInterval(() => {
+      const elapsed = performance.now() - startedAt;
+      setRemainingMs(Math.max(0, dwell - elapsed));
+    }, 100);
+    const advanceTimer = window.setTimeout(() => {
+      setIndex((i) => (i + 1) % frames.length);
+    }, dwell);
+    return () => {
+      window.clearTimeout(advanceTimer);
+      window.clearInterval(tick);
+    };
+  }, [autoMode, index]);
+
   useEffect(() => {
     function recalc() {
+      const TOTAL_H = TOP_STRIP + FRAME_H;
       const availW = Math.max(window.innerWidth - SIDE_PAD * 2, 0);
-      const availH = Math.max(window.innerHeight - TOP_STRIP, 0);
-      const fit = Math.min(availW / FRAME_W, availH / FRAME_H);
+      const availH = Math.max(window.innerHeight - 48, 0);
+      const fit = Math.min(availW / FRAME_W, availH / TOTAL_H);
       setScale(Math.min(fit, MAX_SCALE));
     }
     recalc();
@@ -1612,35 +1667,41 @@ export default function PaperFramePage() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-warm relative flex flex-col">
-      {/* Top strip — combined floating bar (counter + explanation) */}
+    <div
+      className="overflow-hidden bg-warm relative"
+      style={{ height: "100dvh", width: "100dvw" }}
+    >
+      {/* Single scaled wrapper — top strip + canvas scale together as one unit */}
       <div
-        className="shrink-0 w-full flex items-start justify-center px-6 relative z-30"
-        style={{ height: TOP_STRIP }}
+        className="absolute flex flex-col"
+        style={{
+          left: "50%",
+          top: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center",
+          width: FRAME_W,
+        }}
       >
-        {walkthrough ? (
-          <WalkthroughBar
-            walkthrough={walkthrough}
-            index={index}
-            total={frames.length}
-            ref={chipRef}
-          />
-        ) : null}
-      </div>
-
-      {/* Canvas — centered in remaining space */}
-      <div
-        className="flex-1 min-h-0 w-full relative flex items-center justify-center"
-        style={{ paddingLeft: SIDE_PAD, paddingRight: SIDE_PAD }}
-      >
+        {/* Top strip — bar at its natural 940px since wrapper is 1440px */}
         <div
-          style={{
-            width: FRAME_W,
-            height: FRAME_H,
-            transform: `scale(${scale})`,
-            transformOrigin: "center center",
-          }}
+          className="shrink-0 w-full flex items-start justify-center px-6 relative z-30"
+          style={{ minHeight: TOP_STRIP }}
         >
+          {walkthrough ? (
+            <WalkthroughBar
+              walkthrough={walkthrough}
+              index={index}
+              total={frames.length}
+              autoMode={autoMode}
+              remainingMs={remainingMs}
+              onToggleAuto={() => setAutoMode((v) => !v)}
+              ref={chipRef}
+            />
+          ) : null}
+        </div>
+
+        {/* Canvas — intrinsic 1440 × 900 at this layer; outer wrapper scales the whole thing */}
+        <div className="w-full relative" style={{ height: FRAME_H }}>
           <div className="flex gap-3 p-3 min-h-0 h-full w-full box-border overflow-hidden">
             {frame.layout === "csv-viewer" ? (
               <CsvViewerFrame {...sharedProps} />
@@ -1684,7 +1745,7 @@ function WalkthroughTarget({
   if (!active) return <>{children}</>;
   return (
     <div
-      className={`relative walkthrough-spotlight ${className}`}
+      className={`relative walkthrough-spotlight rounded-[14px] ${className}`}
       data-walkthrough-focus={match}
     >
       {children}
@@ -1694,15 +1755,52 @@ function WalkthroughTarget({
 
 const WalkthroughBar = forwardRef<
   HTMLDivElement,
-  { walkthrough: Walkthrough; index: number; total: number }
->(function WalkthroughBar({ walkthrough, index, total }, ref) {
+  {
+    walkthrough: Walkthrough;
+    index: number;
+    total: number;
+    autoMode: boolean;
+    remainingMs: number;
+    onToggleAuto: () => void;
+  }
+>(function WalkthroughBar({ walkthrough, index, total, autoMode, remainingMs, onToggleAuto }, ref) {
   const textKey = `${walkthrough.lead}|${walkthrough.active}`;
   return (
     <div
       ref={ref}
-      className="flex items-center gap-4 rounded-[28px] bg-paper/80 backdrop-blur-md border border-hairline-strong shadow-pop pointer-events-none select-none mt-3 px-5 py-3 w-[940px] min-h-[64px]"
+      className="flex items-center gap-4 rounded-[28px] bg-[rgba(255,255,255,0.80)] backdrop-blur-md border border-hairline-strong shadow-pop select-none mt-3 px-5 py-3 min-h-[64px] w-[940px]"
     >
       <div className="flex items-center gap-2.5 font-[var(--font-inconsolata)] text-[12px] leading-[16px] tracking-[0.02em] shrink-0">
+        <motion.button
+          type="button"
+          onClick={onToggleAuto}
+          aria-label={autoMode ? "Pause auto-play" : "Resume auto-play"}
+          className={`pointer-events-auto cursor-pointer flex items-center justify-center size-[22px] rounded-full transition-colors duration-200 ${
+            autoMode ? "text-coral" : "text-muted"
+          }`}
+          style={{
+            background: autoMode
+              ? "rgba(255, 78, 73, 0.10)"
+              : "rgba(243, 241, 237, 0.80)",
+          }}
+          animate={
+            autoMode
+              ? { scale: [1, 1.04, 1], opacity: [0.92, 1, 0.92] }
+              : { scale: 1, opacity: 1 }
+          }
+          transition={{ duration: 1.6, repeat: autoMode ? Infinity : 0, ease: "easeInOut" }}
+        >
+          {autoMode ? (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="6" y="4" width="4" height="16" rx="1" />
+              <rect x="14" y="4" width="4" height="16" rx="1" />
+            </svg>
+          ) : (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <polygon points="6,4 20,12 6,20" />
+            </svg>
+          )}
+        </motion.button>
         <span className={index === 0 ? "text-faint opacity-40" : "text-muted"}>←</span>
         <span className="tabular-nums text-ink">
           {index + 1} <span className="text-faint">/</span> {total}
@@ -1729,6 +1827,14 @@ const WalkthroughBar = forwardRef<
           </motion.div>
         </AnimatePresence>
       </div>
+      {autoMode ? (
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-px h-4 bg-hairline-strong" />
+          <div className="font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] text-faint tabular-nums w-[34px] text-right">
+            {(remainingMs / 1000).toFixed(1)}s
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 });
@@ -1751,26 +1857,50 @@ function WalkthroughConnector({
     function measure() {
       const chip = chipRef.current;
       if (!chip) return;
-      const target = document.querySelector<HTMLElement>(
+      const container = document.querySelector<HTMLElement>(
         `[data-walkthrough-focus="${focus}"]`
       );
-      if (!target) {
+      if (!container) {
         setCoords(null);
         return;
+      }
+      // For the copilot thread (a long scrollable container), point at the
+      // most-recent visible child instead of the container's empty top edge —
+      // that's where the user's eye actually goes when something new appears.
+      let target: HTMLElement = container;
+      if (focus === "copilot-thread") {
+        const children = (Array.from(container.children) as HTMLElement[]).filter(
+          (c) => c.offsetHeight > 0
+        );
+        const lastChild = children[children.length - 1];
+        if (lastChild) target = lastChild;
       }
       const cRect = chip.getBoundingClientRect();
       const tRect = target.getBoundingClientRect();
       setCoords({
-        from: { x: cRect.left + cRect.width / 2, y: cRect.bottom },
+        // Slight overlap at the chip end (-1px) so Safari sub-pixel rounding
+        // doesn't render as a visible gap between bar and connector.
+        from: { x: cRect.left + cRect.width / 2, y: cRect.bottom - 1 },
         to: { x: tRect.left + tRect.width / 2, y: tRect.top },
       });
     }
     measure();
-    const id = window.requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
+    // Multi-rAF: Safari needs a couple of paint cycles after a transformed
+    // ancestor settles before getBoundingClientRect returns final values.
+    let raf2: number | undefined;
+    const raf1 = window.requestAnimationFrame(() => {
+      measure();
+      raf2 = window.requestAnimationFrame(measure);
+    });
+    const handleResize = () => {
+      measure();
+      window.requestAnimationFrame(measure);
+    };
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.cancelAnimationFrame(id);
-      window.removeEventListener("resize", measure);
+      window.cancelAnimationFrame(raf1);
+      if (raf2 !== undefined) window.cancelAnimationFrame(raf2);
+      window.removeEventListener("resize", handleResize);
     };
   }, [chipRef, focus, index]);
 
@@ -1822,9 +1952,33 @@ function buildConnectorPath(
   if (dy <= 0) {
     return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
   }
-  const c1y = from.y + dy * 0.55;
-  const c2y = to.y - dy * 0.25;
-  return `M ${from.x} ${from.y} C ${from.x} ${c1y} ${to.x} ${c2y} ${to.x} ${to.y}`;
+  const dx = to.x - from.x;
+  const absDx = Math.abs(dx);
+  if (absDx < 1) {
+    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+  }
+  const sx = Math.sign(dx);
+  const r = Math.min(20, absDx / 2, dy / 4);
+  // Short vertical drop straight from the bar before turning sideways.
+  const initialDrop = Math.max(r + 8, Math.min(32, dy * 0.18));
+  // Path geometry can't fit if dy is too short — fall back to a smooth diagonal.
+  if (dy < initialDrop + 2 * r + 8) {
+    return `M ${from.x} ${from.y} L ${from.x} ${from.y + Math.min(12, dy * 0.4)} L ${to.x} ${to.y}`;
+  }
+  const startVerticalEndY = from.y + initialDrop;
+  const horizontalY = startVerticalEndY + r;
+  const firstCornerEndX = from.x + sx * r;
+  const secondCornerStartX = to.x - sx * r;
+  const secondCornerEndY = horizontalY + r;
+  // Z-shape: vertical from chip → soft corner → horizontal across → soft corner → vertical into target.
+  return [
+    `M ${from.x} ${from.y}`,
+    `L ${from.x} ${startVerticalEndY}`,
+    `Q ${from.x} ${horizontalY} ${firstCornerEndX} ${horizontalY}`,
+    `L ${secondCornerStartX} ${horizontalY}`,
+    `Q ${to.x} ${horizontalY} ${to.x} ${secondCornerEndY}`,
+    `L ${to.x} ${to.y}`,
+  ].join(" ");
 }
 
 function CSRDocFrame({
@@ -1860,7 +2014,7 @@ function CSRDocFrame({
     <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
       {/* Editor column */}
       <div
-        className={`${FLOAT_COL} flex-1 min-w-0`}
+        className={`${FLOAT_COL} flex-1 min-w-0 ${chromeFocused ? "walkthrough-spotlight" : ""}`}
         data-walkthrough-focus={chromeFocused ? "chrome" : undefined}
       >
         {/* Tab bar */}
@@ -1975,7 +2129,14 @@ function CopilotRail({
         <div className="hairline-fade" />
       </div>
 
-      <div className="flex flex-col grow pt-5 overflow-auto gap-3.5 px-5 min-h-0 relative scroll-tame">
+      <div
+        className={`flex flex-col grow pt-5 overflow-auto gap-3.5 px-5 min-h-0 relative scroll-tame ${
+          walkthrough?.focus === "copilot-thread" ? "walkthrough-spotlight" : ""
+        }`}
+        data-walkthrough-focus={
+          walkthrough?.focus === "copilot-thread" ? "copilot-thread" : undefined
+        }
+      >
         <AnimatePresence initial={false} mode="popLayout">
           {messages.map((m, i) => (
             <motion.div key={`${i}-${m.role}`} {...fadeIn}>
@@ -2071,7 +2232,9 @@ function CopilotRail({
           ) : null}
           {tertiaryDraftPreview ? (
             <motion.div key="tertiary-preview" {...fadeIn}>
-              <NarrativeDraftPreviewCard preview={tertiaryDraftPreview} />
+              <WalkthroughTarget walkthrough={walkthrough} match="tertiary-wording">
+                <NarrativeDraftPreviewCard preview={tertiaryDraftPreview} />
+              </WalkthroughTarget>
             </motion.div>
           ) : null}
           {tertiaryAcceptedChip ? (
@@ -2104,7 +2267,7 @@ function CopilotRail({
 
       <div className="flex flex-col shrink-0 pt-3 pb-4 gap-1.5 px-5">
         <div className="hairline-fade mb-3" />
-        <div className="flex items-center rounded-[12px] py-2.5 px-3.5 gap-2 bg-soft/60 backdrop-blur-sm border border-hairline">
+        <div className="flex items-center rounded-[12px] py-2.5 px-3.5 gap-2 bg-[rgba(243,241,237,0.60)] backdrop-blur-sm border border-hairline">
           <div className="grow relative h-4 overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -2252,7 +2415,7 @@ function Tab({
 }) {
   const isInactive = state === "inactive";
   const isActive = !isInactive;
-  const bgClass = isInactive ? "bg-soft/60" : "bg-paper";
+  const bgClass = isInactive ? "bg-[rgba(243,241,237,0.60)]" : "bg-paper";
   const labelColor = isInactive ? "text-muted" : "text-ink";
   return (
     <div
@@ -2292,7 +2455,10 @@ function FileTypeBadge({ kind }: { kind: "md" | "csv" | "pdf" }) {
 
 function MapButton() {
   return (
-    <div className="flex items-center justify-center self-center rounded-[8px] shrink-0 bg-paper border border-hairline size-8 hover:bg-soft/60 transition-colors duration-150">
+    <div
+      data-click-hint="map-button"
+      className="flex items-center justify-center self-center rounded-[8px] shrink-0 bg-paper border border-hairline size-8 hover:bg-[rgba(243,241,237,0.60)] transition-colors duration-150"
+    >
       <svg
         width="15"
         height="15"
@@ -2317,6 +2483,7 @@ function MapButton() {
 function SideBySideButton({ active }: { active: boolean }) {
   return (
     <div
+      data-click-hint="side-by-side"
       className={`flex items-center self-center rounded-[8px] py-1.5 px-2.5 gap-1.5 transition-colors duration-200 ${
         active ? "bg-coral" : "bg-paper border border-hairline"
       }`}
@@ -2394,7 +2561,7 @@ function CSRDocBody({
       </p>
 
       <div className="flex flex-col mb-6 rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
-        <div className="flex items-center justify-between py-3 px-5 bg-stripe/70 border-b border-hairline">
+        <div className="flex items-center justify-between py-3 px-5 bg-[rgba(248,246,240,0.70)] border-b border-hairline">
           <div className="flex items-baseline gap-3">
             <div className="tracking-[0.08em] uppercase font-[var(--font-inconsolata)] font-bold text-muted text-[10.5px] leading-[14px]">
               Table 12.4-1
@@ -2422,7 +2589,7 @@ function CSRDocBody({
         </AnimatePresence>
         <Row label="Grade 4" a="0  (0.0%)" b="0  (0.0%)" zebra={!hideGrade3} muted />
 
-        <div className="flex items-center py-3 px-5 border-t border-hairline-strong bg-stripe/40">
+        <div className="flex items-center py-3 px-5 border-t border-hairline-strong bg-[rgba(248,246,240,0.40)]">
           <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] font-semibold text-ink text-[13.5px] leading-[18px]">
             Total — any grade
           </div>
@@ -2472,16 +2639,14 @@ function CSRDocBody({
       <AnimatePresence mode="wait" initial={false}>
         {tertiaryDocDraft ? (
           <motion.div key={`tert-draft-${tertiaryDocDraft.version}-${tertiaryDocDraft.framing}`} {...fadeIn}>
-            <WalkthroughTarget walkthrough={walkthrough} match="tertiary-wording">
-              <NarrativeDraftBlock draft={tertiaryDocDraft} />
-            </WalkthroughTarget>
+            <NarrativeDraftBlock draft={tertiaryDocDraft} />
           </motion.div>
         ) : tertiaryDocParagraph ? (
           <motion.div
             key={`tert-paragraph:${tertiaryDocParagraph}`}
             {...fadeIn}
           >
-            <WalkthroughTarget walkthrough={walkthrough} match="tertiary-wording">
+            <WalkthroughTarget walkthrough={walkthrough} match="editor-tertiary">
               <p className="text-[15px] leading-[170%] font-[var(--font-inter)] text-ink">
                 {tertiaryDocParagraph}
               </p>
@@ -2541,7 +2706,7 @@ function CsvDocBody({
       }`}
       data-walkthrough-focus={evidenceFocused ? "evidence-csv" : undefined}
     >
-      <div className="mb-4 flex items-center gap-2 self-start rounded-full px-3 py-1.5 bg-soft/70 font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] uppercase whitespace-nowrap">
+      <div className="mb-4 flex items-center gap-2 self-start rounded-full px-3 py-1.5 bg-[rgba(243,241,237,0.70)] font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] uppercase whitespace-nowrap">
         <span className="font-bold text-muted shrink-0">Evidence</span>
         <span className="text-faint shrink-0 normal-case">·</span>
         <span className="text-muted shrink-0 normal-case">Phase 3 LFT listings</span>
@@ -2573,7 +2738,7 @@ function CsvDocBody({
       </div>
 
       <div className="flex flex-col rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
-        <div className="flex py-2.5 px-4 bg-stripe/70 border-b border-hairline font-[var(--font-inconsolata)] font-bold text-muted text-[10px] leading-3 tracking-[0.08em] uppercase">
+        <div className="flex py-2.5 px-4 bg-[rgba(248,246,240,0.70)] border-b border-hairline font-[var(--font-inconsolata)] font-bold text-muted text-[10px] leading-3 tracking-[0.08em] uppercase">
           <div className="basis-0 grow-[1.4] shrink whitespace-nowrap">PT-ID</div>
           <div className="basis-0 grow-[0.8] shrink whitespace-nowrap">Day</div>
           <div className="basis-0 grow shrink text-right whitespace-nowrap">ALT (U/L)</div>
@@ -2583,7 +2748,7 @@ function CsvDocBody({
         {CSV_VIEWER_ROWS.map((row, i) => (
           <div
             key={row.ptId}
-            className={`flex py-2.5 px-4 ${i % 2 === 1 ? "bg-stripe/40" : ""}`}
+            className={`flex py-2.5 px-4 ${i % 2 === 1 ? "bg-[rgba(248,246,240,0.40)]" : ""}`}
           >
             <div className="basis-0 grow-[1.4] shrink whitespace-nowrap font-[var(--font-inconsolata)] text-ink text-[12.5px] leading-[16px] tabular-nums">
               {row.ptId}
@@ -2843,7 +3008,7 @@ function ProtocolDocBody({ padding }: { padding: string }) {
       </p>
 
       <div className="flex flex-col mb-6 rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
-        <div className="flex py-2.5 px-5 bg-stripe/70 border-b border-hairline">
+        <div className="flex py-2.5 px-5 bg-[rgba(248,246,240,0.70)] border-b border-hairline">
           <div className="tracking-[0.08em] uppercase grow font-[var(--font-inconsolata)] font-bold text-muted text-[10.5px] leading-3">
             Definitions
           </div>
@@ -2883,7 +3048,7 @@ function DefinitionRow({
 }) {
   return (
     <div
-      className={`grid grid-cols-[112px_1fr] gap-5 py-3.5 px-5 ${zebra ? "bg-stripe/40" : ""}`}
+      className={`grid grid-cols-[112px_1fr] gap-5 py-3.5 px-5 ${zebra ? "bg-[rgba(248,246,240,0.40)]" : ""}`}
     >
       <div className="font-[var(--font-display)] font-medium text-ink text-[13.5px] leading-[18px]">
         {term}
@@ -2956,7 +3121,14 @@ function ProtocolFrame({
 function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
   const focused = walkthrough?.focus === "trace-graph";
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-warm/70 backdrop-blur-md px-6">
+    <div
+      className="absolute inset-0 z-20 flex items-center justify-center px-6"
+      style={{
+        background: "rgba(20, 22, 26, 0.22)",
+        backdropFilter: "blur(16px) saturate(120%)",
+        WebkitBackdropFilter: "blur(16px) saturate(120%)",
+      }}
+    >
       <div
         className={`flex flex-col w-full max-w-[1090px] rounded-[20px] bg-paper shadow-modal overflow-hidden relative ${
           focused ? "walkthrough-spotlight" : ""
@@ -2986,7 +3158,7 @@ function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
             </div>
           </div>
           <div className="flex items-center gap-2 font-[var(--font-inconsolata)] text-[11px] leading-[14px] shrink-0">
-            <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-soft/70">
+            <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-[rgba(243,241,237,0.70)]">
               <div className="rounded-full size-1.5 bg-green" />
               <span className="text-muted">11 nodes · 14 edges</span>
             </div>
@@ -3176,7 +3348,7 @@ function TraceMapCanvas() {
 
       {/* minimap */}
       <div
-        className="absolute rounded-[8px] bg-paper/90 backdrop-blur-sm border border-hairline shadow-card overflow-hidden"
+        className="absolute rounded-[8px] bg-[rgba(255,255,255,0.90)] backdrop-blur-sm border border-hairline shadow-card overflow-hidden"
         style={{
           right: `${(18 / W) * 100}%`,
           bottom: `${(18 / H) * 100}%`,
@@ -3247,6 +3419,7 @@ function TraceNode({
         : "bg-soft text-faint";
   return (
     <div
+      data-click-hint={highlight ? "trace-node-current" : undefined}
       className={`absolute flex items-center gap-2 px-3 rounded-[14px] bg-paper transition-shadow ${
         highlight
           ? "ring-[1.5px] ring-coral shadow-[0_0_0_6px_rgba(255,78,73,0.08),0_4px_14px_-4px_rgba(255,78,73,0.20)]"
@@ -3342,7 +3515,7 @@ function TraceMapFrame({
 
 function PreparingBlock({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col mt-[18px] py-2.5 px-4 gap-2 bg-warning-soft/70 border-l-[2px] border-l-warning rounded-r-[8px]">
+    <div className="flex flex-col mt-[18px] py-2.5 px-4 gap-2 bg-[rgba(255,246,224,0.70)] border-l-[2px] border-l-warning rounded-r-[8px]">
       <div className="flex items-center gap-2">
         <motion.div
           className="rounded-full shrink-0 bg-warning size-1.5"
@@ -3366,7 +3539,7 @@ function PreparingBlock({ children }: { children: React.ReactNode }) {
 function NarrativeDraftBlock({ draft }: { draft: NarrativeDraft }) {
   const versionKey = `${draft.version}-${draft.framing}`;
   return (
-    <div className="flex flex-col mt-[18px] py-3 px-[18px] gap-3 bg-warning-soft/60 border-l-[2px] border-l-warning rounded-r-[8px]">
+    <div className="flex flex-col mt-[18px] py-3 px-[18px] gap-3 bg-[rgba(255,246,224,0.60)] border-l-[2px] border-l-warning rounded-r-[8px]">
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <PrevNextNav size="md" />
@@ -3438,7 +3611,10 @@ function PrevNextNav({ size }: { size: "sm" | "md" }) {
 
 function ReasonedChipView({ label, expanded }: { label: string; expanded?: boolean }) {
   return (
-    <div className="flex items-center rounded-full py-1 px-3 gap-2 bg-soft/70">
+    <div
+      data-click-hint="reasoned-chip"
+      className="flex items-center rounded-full py-1 px-3 gap-2 bg-[rgba(243,241,237,0.70)]"
+    >
       <svg
         width="11"
         height="11"
@@ -3493,7 +3669,10 @@ function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview
           </AnimatePresence>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center justify-center size-[26px] rounded-full bg-coral shadow-card">
+          <div
+            data-click-hint="accept-button"
+            className="flex items-center justify-center size-[26px] rounded-full bg-coral shadow-card"
+          >
             <svg
               width="11"
               height="11"
@@ -3539,7 +3718,7 @@ function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview
               {preview.tags.map((t) => (
                 <div
                   key={t}
-                  className="rounded-full px-2 py-0.5 bg-soft/80 font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.02em] uppercase"
+                  className="rounded-full px-2 py-0.5 bg-[rgba(243,241,237,0.80)] font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.02em] uppercase"
                 >
                   {t}
                 </div>
@@ -3554,7 +3733,7 @@ function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview
 
 function AcceptedChipView({ chip }: { chip: AcceptedChip }) {
   return (
-    <div className="flex items-center rounded-full py-1 px-3 gap-2 bg-green-soft/70">
+    <div className="flex items-center rounded-full py-1 px-3 gap-2 bg-[rgba(228,246,236,0.70)]">
       <svg
         width="11"
         height="11"
@@ -3697,7 +3876,7 @@ function ClarifyOptions({ card }: { card: ClarifyCard }) {
             className={`flex items-center rounded-[10px] gap-2.5 py-2.5 px-3 transition-colors duration-200 ${
               opt.selected
                 ? "bg-coral-soft"
-                : "bg-soft/50"
+                : "bg-[rgba(243,241,237,0.50)]"
             }`}
           >
             <div className="grow font-[var(--font-inter)] text-ink text-[13px] leading-[18px]">
@@ -3750,7 +3929,7 @@ function ClarifyOptions({ card }: { card: ClarifyCard }) {
 
 function SummaryChip({ choices }: { choices: string[] }) {
   return (
-    <div className="flex items-center self-start rounded-full py-1.5 px-3 gap-2 bg-soft/70">
+    <div className="flex items-center self-start rounded-full py-1.5 px-3 gap-2 bg-[rgba(243,241,237,0.70)]">
       <svg
         width="11"
         height="11"
@@ -3771,7 +3950,7 @@ function SummaryChip({ choices }: { choices: string[] }) {
 }
 
 function StepRow({ step }: { step: Step }) {
-  const ringClass = step.highlight ? "ring-1 ring-info/60" : "";
+  const ringClass = step.highlight ? "ring-1 ring-[rgba(79,168,228,0.60)]" : "";
   return (
     <div className={`flex flex-col rounded-[12px] overflow-clip bg-paper border border-hairline ${ringClass}`}>
       <div className="flex items-center justify-between py-2 px-3 gap-2 border-b border-hairline">
@@ -3845,8 +4024,9 @@ function FileBadge({ file }: { file: StepFile }) {
 function FileRow({ file, expanded }: { file: StepFile; expanded: boolean }) {
   return (
     <div
+      data-click-hint={expanded ? undefined : "file-row"}
       className={`flex items-center justify-between py-2 px-3 transition-colors duration-200 ${
-        expanded ? "bg-stripe/60 border-b border-hairline" : ""
+        expanded ? "bg-[rgba(248,246,240,0.60)] border-b border-hairline" : ""
       }`}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -3914,7 +4094,7 @@ function StepBodyCsv({
           <div
             key={ri}
             className={`flex py-1.5 px-3 ${
-              row.highlight ? "bg-pink/40" : ri % 2 === 1 ? "bg-stripe/60" : ""
+              row.highlight ? "bg-[rgba(255,217,229,0.40)]" : ri % 2 === 1 ? "bg-[rgba(248,246,240,0.60)]" : ""
             }`}
           >
             {row.values.map((v, vi) => {
@@ -4003,7 +4183,7 @@ function MessageBubble({ message }: { message: Message }) {
         <div className="font-[var(--font-inter)] text-faint text-[10.5px] leading-[14px]">
           you · {message.time}
         </div>
-        <div className="max-w-[280px] rounded-[14px] py-2 px-3.5 bg-soft/70">
+        <div className="max-w-[280px] rounded-[14px] py-2 px-3.5 bg-[rgba(243,241,237,0.70)]">
           <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-ink">
             {message.text}
           </div>
@@ -4062,7 +4242,7 @@ function Row({
   muted?: boolean;
 }) {
   return (
-    <div className={`flex items-center py-2.5 px-5 ${zebra ? "bg-stripe/60" : ""}`}>
+    <div className={`flex items-center py-2.5 px-5 ${zebra ? "bg-[rgba(248,246,240,0.60)]" : ""}`}>
       <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] text-ink text-[13.5px] leading-[18px]">
         {label}
       </div>
@@ -4092,7 +4272,7 @@ function Row({
 function SeparatorFrame() {
   return (
     <div className="flex w-full h-full items-center justify-center bg-black">
-      <div className="font-[var(--font-inconsolata)] text-white/40 text-[11px] leading-[14px] tracking-[0.18em] uppercase">
+      <div className="font-[var(--font-inconsolata)] text-[rgba(255,255,255,0.40)] text-[11px] leading-[14px] tracking-[0.18em] uppercase">
         backwards section ↓
       </div>
     </div>
@@ -4970,7 +5150,7 @@ function WorkspaceItem({
   return (
     <div
       className={`flex items-center justify-between py-2 px-2.5 gap-2 rounded-[8px] transition-colors duration-150 ${
-        active ? "bg-soft/70" : ""
+        active ? "bg-[rgba(243,241,237,0.70)]" : ""
       }`}
     >
       <div className="flex items-center gap-2 min-w-0">
