@@ -1509,6 +1509,10 @@ const FRAME_H = 900;
 const OUTER_PAD = 40;
 const MAX_SCALE = 0.92;
 
+/** White “island” on warm — editor / Copilot / split panes */
+const FLOAT_COL =
+  "rounded-[10px] border border-hairline bg-white shadow-card overflow-hidden flex flex-col min-h-0";
+
 export default function PaperFramePage() {
   const [index, setIndex] = useState(0);
   const [scale, setScale] = useState(MAX_SCALE);
@@ -1586,7 +1590,7 @@ export default function PaperFramePage() {
       style={{ padding: OUTER_PAD }}
     >
       <div
-        className="absolute left-1/2 top-1/2 overflow-hidden rounded-[10px] border border-hairline bg-white shadow-[0_12px_40px_rgba(15,23,42,0.14)]"
+        className="absolute left-1/2 top-1/2 overflow-visible"
         style={{
           width: FRAME_W,
           height: FRAME_H,
@@ -1594,7 +1598,7 @@ export default function PaperFramePage() {
           transformOrigin: "center center",
         }}
       >
-        <div className="flex w-full h-full overflow-hidden">
+        <div className="flex gap-3 p-3 min-h-0 h-full w-full box-border overflow-hidden">
           {frame.layout === "csv-viewer" ? (
             <CsvViewerFrame {...sharedProps} />
           ) : frame.layout === "side-by-side" ? (
@@ -1726,9 +1730,9 @@ function CSRDocFrame({
   walkthrough,
 }: SharedFrameProps) {
   return (
-    <div className="[font-synthesis:none] flex overflow-hidden w-full h-full bg-white antialiased text-xs/4">
+    <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
       {/* Editor column */}
-      <div className="flex flex-col grow min-w-0 min-h-0 bg-white overflow-hidden">
+      <div className={`${FLOAT_COL} flex-1 min-w-0`}>
         {/* Tab bar */}
         <DocTabBar tabDirty={tabDirty} />
 
@@ -1823,7 +1827,9 @@ function CopilotRail({
       })()
     : -1;
   return (
-    <div className="flex flex-col w-[340px] shrink-0 min-h-0 bg-white border-l border-[#E5E7EB]">
+    <div
+      className={`[font-synthesis:none] antialiased text-xs/4 ${FLOAT_COL} w-[340px] shrink-0`}
+    >
       <div className="flex items-center justify-between h-14 shrink-0 px-5 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2.5">
           <div className="rounded-full shrink-0 bg-[#FF4E49] size-2" />
@@ -2551,8 +2557,8 @@ function CsvViewerFrame({
   walkthrough,
 }: SharedFrameProps) {
   return (
-    <div className="[font-synthesis:none] flex overflow-hidden w-full h-full bg-white antialiased text-xs/4">
-      <div className="flex flex-col grow min-w-0 min-h-0 bg-white overflow-hidden">
+    <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
+      <div className={`${FLOAT_COL} flex-1 min-w-0`}>
         <CsvActiveTabBar />
         <CsvDocBody
           showFooterAction={true}
@@ -2613,11 +2619,13 @@ function SideBySideFrame({
   walkthrough,
 }: SharedFrameProps) {
   return (
-    <div className="[font-synthesis:none] flex overflow-hidden w-full h-full bg-white antialiased text-xs/4">
-      <div className="flex flex-col grow min-w-0 min-h-0 bg-white overflow-hidden">
-        <SplitTabBar />
-        <div className="flex grow min-h-0 overflow-hidden relative">
-          <div className="flex flex-col flex-1 basis-0 min-w-0 border-r border-[#E5E7EB]">
+    <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
+      <div className="flex flex-1 min-w-0 min-h-0 flex-col gap-3">
+        <div className={`${FLOAT_COL} shrink-0`}>
+          <SplitTabBar />
+        </div>
+        <div className="flex flex-1 min-h-0 gap-3 min-w-0 relative">
+          <div className={`${FLOAT_COL} flex-1 min-w-0`}>
             <CSRDocBody
               hideGrade3={hideGrade3}
               preparingNarrative={preparingNarrative}
@@ -2629,7 +2637,7 @@ function SideBySideFrame({
               paddingTop="pt-6"
             />
           </div>
-          <div className="flex flex-col flex-1 basis-0 min-w-0">
+          <div className={`${FLOAT_COL} flex-1 min-w-0`}>
             <CsvDocBody
               showFooterAction={true}
               padding="px-6"
@@ -2638,7 +2646,7 @@ function SideBySideFrame({
             />
           </div>
           {walkthrough?.focus === "split-view" ? (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
               <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
                 <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
                   {walkthrough.title}
@@ -2785,10 +2793,10 @@ function ProtocolFrame({
   walkthrough,
 }: SharedFrameProps) {
   return (
-    <div className="[font-synthesis:none] flex overflow-hidden w-full h-full bg-white antialiased text-xs/4">
+    <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
       <div
-        className={`flex flex-col grow min-w-0 min-h-0 bg-white overflow-hidden relative ${
-          walkthrough?.focus === "protocol-doc" ? "walkthrough-spotlight rounded-[10px]" : ""
+        className={`relative ${FLOAT_COL} flex-1 min-w-0 ${
+          walkthrough?.focus === "protocol-doc" ? "walkthrough-spotlight" : ""
         }`}
       >
         {walkthrough?.focus === "protocol-doc" ? (
@@ -2826,7 +2834,7 @@ function ProtocolFrame({
 function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
   const focused = walkthrough?.focus === "trace-graph";
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px] px-6">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-warm/65 backdrop-blur-[1px] px-6">
       <div
         className={`flex flex-col w-full max-w-[1090px] rounded-2xl bg-white border border-[#E5E7EB] shadow-[0_24px_48px_rgba(15,18,22,0.18)] overflow-hidden relative ${
           focused ? "walkthrough-spotlight" : ""
@@ -3191,8 +3199,8 @@ function TraceMapFrame({
   walkthrough,
 }: SharedFrameProps) {
   return (
-    <div className="[font-synthesis:none] flex overflow-hidden w-full h-full bg-white antialiased text-xs/4 relative">
-      <div className="flex flex-col grow min-w-0 min-h-0 bg-white overflow-hidden">
+    <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 relative overflow-hidden">
+      <div className={`${FLOAT_COL} flex-1 min-w-0`}>
         <DocTabBar tabDirty={true} />
         <CSRDocBody
           hideGrade3={hideGrade3}
