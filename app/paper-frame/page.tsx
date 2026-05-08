@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, {
+  Fragment,
+  forwardRef,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const fadeIn = {
@@ -106,10 +113,7 @@ type WalkthroughFocus =
 
 type Walkthrough = {
   title: string;
-  subtitle?: string;
   focus: WalkthroughFocus;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
 };
 
 type Frame = {
@@ -1413,92 +1417,52 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
   const slide = index + 1; // 1-based slide number
   if (slide >= 6 && slide <= 13) {
     return {
-      title: "Clarifying questions before drafting",
-      subtitle: "Peer narrows framing, subgroup depth, and Phase 2 references.",
+      title:
+        "A couple of clarifying questions before drafting give the agent a much better shot at one-shotting a narrative the writer actually wanted, instead of forcing a full rewrite later.",
       focus: "copilot-clarify",
-      placement: "top",
     };
   }
   if (slide >= 14 && slide <= 21) {
     return {
-      title: "Reasoning chain with source trace",
-      subtitle: "Each step opens the file, filter, and rows behind the narrative.",
+      title:
+        "Each reasoning step links back to the exact rows and sections it came from, so the writer audits a defensible draft instead of trusting a black box.",
       focus: "copilot-reasoning",
-      placement: "top",
     };
   }
   if (slide >= 23 && slide <= 26) {
     return {
-      title: "Compare narrative framings",
-      subtitle: "Cycle conservative, direct, and comparative drafts before accepting.",
+      title:
+        "The agent drafts a few framings of the same narrative upfront, so the writer keeps editorial judgment in the loop instead of accepting whichever version came out first.",
       focus: "copilot-narrative-preview",
-      placement: "top",
     };
   }
-  if (slide === 28) {
+  if (slide >= 28 && slide <= 31) {
+    const focus: WalkthroughFocus =
+      slide === 28
+        ? "copilot-reasoning"
+        : slide === 29
+        ? "evidence-csv"
+        : slide === 30
+        ? "split-view"
+        : "editor-narrative";
     return {
-      title: "Trace narrative back to evidence",
-      subtitle: "Re-open the LFT rows that drove the draft.",
-      focus: "copilot-reasoning",
-      placement: "top",
+      title:
+        "The writer can pop open the source evidence behind any sentence and pin it side-by-side with the draft, so verification happens in place instead of in another window.",
+      focus,
     };
   }
-  if (slide === 29) {
+  if (slide === 38) {
     return {
-      title: "Open the full evidence",
-      subtitle: "Move from snippet to the complete LFT listing.",
-      focus: "evidence-csv",
-      placement: "top",
-    };
-  }
-  if (slide === 30) {
-    return {
-      title: "Side-by-side: narrative and source data",
-      subtitle: "Compare the CSR section against its underlying listing.",
-      focus: "split-view",
-      placement: "top",
-    };
-  }
-  if (slide === 31) {
-    return {
-      title: "Accepted narrative in §12.4",
-      subtitle: "The chosen draft now lives in the document.",
-      focus: "editor-narrative",
-      placement: "top",
-    };
-  }
-  if (slide >= 37 && slide <= 38) {
-    return {
-      title: "FDA vs EMA wording divergence",
-      subtitle: "Follow-up picks an authority-aligned sentence.",
+      title:
+        "When the same fact needs different phrasing for FDA and EMA, the agent surfaces both region-tagged versions in chat so the writer picks once instead of translating between regulators.",
       focus: "tertiary-wording",
-      placement: "top",
     };
   }
-  if (slide === 39) {
+  if (slide === 40 || slide === 41) {
     return {
-      title: "Decision committed to the CSR",
-      subtitle: "The selected wording lands in the document.",
-      focus: "tertiary-wording",
-      placement: "top",
-    };
-  }
-  if (slide === 40) {
-    return {
-      title: "Artifact traceability graph",
-      subtitle: "Relational map of artifacts feeding §12.4.",
-      focus: "trace-graph",
-      placement: "bottom",
-      align: "center",
-    };
-  }
-  if (slide === 41) {
-    return {
-      title: "From trace graph to protocol",
-      subtitle: "Nodes open as tabs — verify monitoring rules in the source.",
-      focus: "protocol-doc",
-      placement: "top",
-      align: "center",
+      title:
+        "A relational graph of every artifact feeding the section lets the writer navigate the audit trail by data flow instead of a folder tree, and clicking a node opens it as a tab.",
+      focus: slide === 40 ? "trace-graph" : "protocol-doc",
     };
   }
   return null;
@@ -1509,13 +1473,13 @@ const FRAME_H = 900;
 const OUTER_PAD = 40;
 const MAX_SCALE = 0.92;
 
-/** White “island” on warm — editor / Copilot / split panes */
+/** White "island" on warm — editor / Copilot / split panes */
 const FLOAT_COL =
-  "rounded-[10px] border border-hairline bg-white shadow-card overflow-hidden flex flex-col min-h-0";
+  "rounded-[14px] bg-paper shadow-pop overflow-hidden flex flex-col min-h-0";
 
 /** Side-by-side: match CSR section title ↔ listing title (same size/weight) */
 const SPLIT_PANE_PAIR_TITLE =
-  "font-[var(--font-inter)] text-[30px] font-normal leading-[115%] tracking-[-0.005em] text-[#1A1B1F]";
+  "font-[var(--font-display)] text-[26px] font-normal leading-[120%] tracking-[-0.01em] text-ink";
 
 export default function PaperFramePage() {
   const [index, setIndex] = useState(0);
@@ -1617,61 +1581,18 @@ export default function PaperFramePage() {
         </div>
       </div>
 
-      {/* frame indicator */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full px-3 py-1.5 bg-[#1A1B1F]/85 text-white font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.04em] backdrop-blur-sm pointer-events-none select-none">
-        <span className={index === 0 ? "opacity-30" : "opacity-90"}>←</span>
-        <span>
-          {index + 1} / {frames.length}
-        </span>
-        <span className={index === frames.length - 1 ? "opacity-30" : "opacity-90"}>→</span>
-      </div>
-    </div>
-  );
-}
-
-function WalkthroughCalloutChip({ walkthrough }: { walkthrough: Walkthrough }) {
-  return (
-    <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[min(300px,100%)] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-      <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em]">
-        {walkthrough.title}
-      </div>
-      {walkthrough.subtitle ? (
-        <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-          {walkthrough.subtitle}
-        </div>
+      {walkthrough ? (
+        <WalkthroughOverlay walkthrough={walkthrough} index={index} />
       ) : null}
-    </div>
-  );
-}
 
-function WalkthroughCallout({
-  walkthrough,
-  placement = "top",
-  align = "start",
-}: {
-  walkthrough: Walkthrough;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
-}) {
-  const placementClass =
-    placement === "bottom"
-      ? "top-full mt-4"
-      : placement === "left"
-      ? "right-full mr-4 top-1/2 -translate-y-1/2"
-      : placement === "right"
-      ? "left-full ml-4 top-1/2 -translate-y-1/2"
-      : "bottom-full mb-4";
-  const alignClass =
-    placement === "top" || placement === "bottom"
-      ? align === "center"
-        ? "left-1/2 -translate-x-1/2"
-        : align === "end"
-        ? "right-0"
-        : "left-0"
-      : "";
-  return (
-    <div className={`absolute z-30 pointer-events-none ${placementClass} ${alignClass}`}>
-      <WalkthroughCalloutChip walkthrough={walkthrough} />
+      {/* frame indicator */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2.5 rounded-full px-3 py-1.5 bg-paper/70 text-ink font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] backdrop-blur-md border border-hairline-strong shadow-card pointer-events-none select-none">
+        <span className={index === 0 ? "text-faint opacity-40" : "text-muted"}>←</span>
+        <span className="tabular-nums">
+          {index + 1} <span className="text-faint">/</span> {frames.length}
+        </span>
+        <span className={index === frames.length - 1 ? "text-faint opacity-40" : "text-muted"}>→</span>
+      </div>
     </div>
   );
 }
@@ -1680,29 +1601,150 @@ function WalkthroughTarget({
   walkthrough,
   match,
   children,
-  placement,
-  align,
   className = "",
 }: {
   walkthrough?: Walkthrough | null;
   match: WalkthroughFocus;
   children: React.ReactNode;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
   className?: string;
 }) {
   const active = !!walkthrough && walkthrough.focus === match;
   if (!active) return <>{children}</>;
   return (
-    <div className={`relative walkthrough-spotlight ${className}`}>
+    <div
+      className={`relative walkthrough-spotlight ${className}`}
+      data-walkthrough-focus={match}
+    >
       {children}
-      <WalkthroughCallout
-        walkthrough={walkthrough!}
-        placement={placement ?? walkthrough!.placement}
-        align={align ?? walkthrough!.align}
-      />
     </div>
   );
+}
+
+const WalkthroughChip = forwardRef<HTMLDivElement, { walkthrough: Walkthrough }>(
+  function WalkthroughChip({ walkthrough }, ref) {
+    return (
+      <div className="fixed left-1/2 top-[14px] -translate-x-1/2 z-30 pointer-events-none">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={walkthrough.title}
+            ref={ref}
+            initial={{ opacity: 0, y: 2 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -2 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="rounded-[14px] px-3.5 py-1.5 max-w-[720px] text-center"
+            style={{
+              background: "var(--color-walkthrough-glass-bg)",
+              border: "1px solid var(--color-walkthrough-glass-border)",
+              backdropFilter: "blur(10px) saturate(140%)",
+              WebkitBackdropFilter: "blur(10px) saturate(140%)",
+              boxShadow: "var(--shadow-walkthrough)",
+            }}
+          >
+            <div
+              className="font-[var(--font-inter)] font-medium text-[11.5px] leading-[15px] tracking-[-0.005em]"
+              style={{ color: "var(--color-walkthrough-ink)" }}
+            >
+              {walkthrough.title}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
+  }
+);
+
+function WalkthroughOverlay({
+  walkthrough,
+  index,
+}: {
+  walkthrough: Walkthrough;
+  index: number;
+}) {
+  const chipRef = useRef<HTMLDivElement | null>(null);
+  const [coords, setCoords] = useState<{
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    function measure() {
+      const chip = chipRef.current;
+      if (!chip) return;
+      const target = document.querySelector<HTMLElement>(
+        `[data-walkthrough-focus="${walkthrough.focus}"]`
+      );
+      if (!target) {
+        setCoords(null);
+        return;
+      }
+      const cRect = chip.getBoundingClientRect();
+      const tRect = target.getBoundingClientRect();
+      setCoords({
+        from: { x: cRect.left + cRect.width / 2, y: cRect.bottom },
+        to: { x: tRect.left + tRect.width / 2, y: tRect.top },
+      });
+    }
+    measure();
+    const id = window.requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.cancelAnimationFrame(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [walkthrough.focus, walkthrough.title, index]);
+
+  const pathD = coords ? buildConnectorPath(coords.from, coords.to) : "";
+  const pathKey = `${walkthrough.focus}-${pathD}`;
+
+  return (
+    <>
+      {coords ? (
+        <svg
+          className="fixed inset-0 w-screen h-screen pointer-events-none z-20 overflow-visible"
+          aria-hidden="true"
+        >
+          <motion.path
+            key={pathKey}
+            d={pathD}
+            stroke="var(--color-walkthrough-line)"
+            strokeWidth={1}
+            strokeDasharray="3 4"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          />
+          <motion.circle
+            key={`${pathKey}-dot`}
+            cx={coords.to.x}
+            cy={coords.to.y}
+            r={3}
+            fill="var(--color-walkthrough-dot)"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.18, ease: "easeOut", delay: 0.2 }}
+            style={{ transformOrigin: `${coords.to.x}px ${coords.to.y}px` }}
+          />
+        </svg>
+      ) : null}
+      <WalkthroughChip walkthrough={walkthrough} ref={chipRef} />
+    </>
+  );
+}
+
+function buildConnectorPath(
+  from: { x: number; y: number },
+  to: { x: number; y: number }
+) {
+  const dy = to.y - from.y;
+  if (dy <= 0) {
+    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+  }
+  const c1y = from.y + dy * 0.55;
+  const c2y = to.y - dy * 0.25;
+  return `M ${from.x} ${from.y} C ${from.x} ${c1y} ${to.x} ${c2y} ${to.x} ${to.y}`;
 }
 
 function CSRDocFrame({
@@ -1832,21 +1874,24 @@ function CopilotRail({
     : -1;
   return (
     <div
-      className={`[font-synthesis:none] antialiased text-xs/4 ${FLOAT_COL} w-[340px] shrink-0`}
+      className={`[font-synthesis:none] antialiased text-xs/4 ${FLOAT_COL} w-[360px] shrink-0`}
     >
-      <div className="flex items-center justify-between h-14 shrink-0 px-5 border-b border-[#E5E7EB]">
-        <div className="flex items-center gap-2.5">
-          <div className="rounded-full shrink-0 bg-[#FF4E49] size-2" />
-          <div className="font-[var(--font-inter)] font-medium text-[#1A1B1F] text-[18px] leading-[22px] tracking-[-0.005em]">
-            Copilot
+      <div className="flex flex-col shrink-0">
+        <div className="flex items-center justify-between h-14 px-5">
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-full shrink-0 bg-coral size-1.5" />
+            <div className="font-[var(--font-inter)] font-medium text-ink text-[16px] leading-[22px] tracking-[-0.01em]">
+              Copilot
+            </div>
+          </div>
+          <div className="font-[var(--font-inconsolata)] text-faint text-[11px] leading-[14px] tracking-[0.02em]">
+            peer-csr-v3
           </div>
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px] tracking-[0.04em]">
-          peer-csr-v3
-        </div>
+        <div className="hairline-fade" />
       </div>
 
-      <div className="flex flex-col grow pt-[18px] overflow-auto gap-3.5 px-4 min-h-0 relative">
+      <div className="flex flex-col grow pt-5 overflow-auto gap-3.5 px-5 min-h-0 relative scroll-tame">
         <AnimatePresence initial={false} mode="popLayout">
           {messages.map((m, i) => (
             <motion.div key={`${i}-${m.role}`} {...fadeIn}>
@@ -1897,7 +1942,7 @@ function CopilotRail({
             <motion.div
               key="intro"
               {...fadeIn}
-              className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#1A1B1F]"
+              className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#14161A]"
             >
               {narrativeIntroText}
             </motion.div>
@@ -1935,7 +1980,7 @@ function CopilotRail({
             <motion.div
               key="tertiary-text"
               {...fadeIn}
-              className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#1A1B1F]"
+              className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#14161A]"
             >
               {tertiaryText}
             </motion.div>
@@ -1965,7 +2010,7 @@ function CopilotRail({
             <motion.div
               key="drafting"
               {...fadeIn}
-              className="text-[13px] leading-[155%] font-[var(--font-inter)] italic text-[#8E939A]"
+              className="text-[13px] leading-[155%] font-[var(--font-inter)] italic text-[#9C9EA3]"
             >
               {draftingText}
             </motion.div>
@@ -1973,29 +2018,32 @@ function CopilotRail({
         </AnimatePresence>
       </div>
 
-      <div className="flex flex-col shrink-0 pt-3 pb-4 gap-1.5 border-t border-[#E5E7EB] px-4">
-        <div className="flex items-center rounded-[10px] py-2.5 px-3 gap-2 bg-white ring-1 ring-[#E5E7EB]">
+      <div className="flex flex-col shrink-0 pt-3 pb-4 gap-1.5 px-5">
+        <div className="hairline-fade mb-3" />
+        <div className="flex items-center rounded-[12px] py-2.5 px-3.5 gap-2 bg-soft/60 backdrop-blur-sm border border-hairline">
           <div className="grow relative h-4 overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={hasInput ? `typed:${input}` : "placeholder"}
                 {...fadeIn}
                 className={`font-[var(--font-inter)] text-[13px] leading-4 ${
-                  hasInput ? "text-black" : "text-[#5A5E66]"
+                  hasInput ? "text-ink" : "text-faint"
                 }`}
               >
                 {hasInput ? input : placeholder}
               </motion.div>
             </AnimatePresence>
           </div>
-          <div className="flex items-center justify-center rounded-md shrink-0 bg-[#FF4E49] size-6">
+          <div className="flex items-center justify-center rounded-[8px] shrink-0 bg-coral size-7 shadow-card">
             <svg
-              width="12"
-              height="12"
+              width="13"
+              height="13"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#FFFFFF"
-              strokeWidth="2"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
             >
@@ -2011,16 +2059,16 @@ function CopilotRail({
 
 function TopNav({ avatar }: { avatar: "solid" | "outline" }) {
   return (
-    <div className="flex items-center h-14 w-full shrink-0 px-6 gap-4 bg-white border-b border-[#E5E7EB]">
+    <div className="flex items-center h-14 w-full shrink-0 px-7 gap-5 bg-paper border-b border-hairline">
       <div className="flex items-center gap-2">
         <div className="flex items-center justify-center shrink-0 size-6">
           <svg
-            width="24"
-            height="24"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#FF4E49"
-            strokeWidth="1.7"
+            strokeWidth="1.6"
             strokeLinecap="round"
             xmlns="http://www.w3.org/2000/svg"
             className="shrink-0"
@@ -2029,39 +2077,39 @@ function TopNav({ avatar }: { avatar: "solid" | "outline" }) {
             <circle cx="15" cy="12" r="4.5" />
           </svg>
         </div>
-        <div className="font-[var(--font-inter)] font-semibold text-[#FF4E49] text-[18px] leading-[22px]">
+        <div className="font-[var(--font-inter)] font-medium text-coral text-[17px] leading-[22px] tracking-[-0.005em]">
           Peer
         </div>
       </div>
 
-      <div className="flex items-center ml-6 gap-2 font-[var(--font-inconsolata)] text-[13px] leading-4">
-        <span className="text-[#1A1B1F]">Aurora-IV</span>
-        <span className="text-[#8E939A]">/</span>
-        <span className="text-[#1A1B1F]">Phase III CSR</span>
-        <span className="text-[#8E939A]">/</span>
-        <span className="text-[#1A1B1F]">Module 5.3.5</span>
-        <span className="text-[#8E939A]">/</span>
-        <span className="text-[#1A1B1F]">CSR-014.md</span>
+      <div className="flex items-center gap-1.5 font-[var(--font-inter)] text-[12.5px] leading-4 tracking-[-0.005em]">
+        <span className="text-ink">Aurora-IV</span>
+        <span className="text-faint">·</span>
+        <span className="text-ink">Phase III CSR</span>
+        <span className="text-faint">·</span>
+        <span className="text-ink">Module 5.3.5</span>
+        <span className="text-faint">·</span>
+        <span className="text-ink">CSR-014.md</span>
       </div>
 
       <div className="grow" />
 
       <div className="flex items-center gap-1.5">
-        <div className="rounded-full shrink-0 bg-[#19A875] size-1.5" />
-        <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[13px] leading-4">
-          auto-saved · 14:02
+        <div className="rounded-full shrink-0 bg-green size-1.5 opacity-90" />
+        <div className="font-[var(--font-inter)] text-muted text-[12px] leading-4">
+          auto-saved 14:02
         </div>
       </div>
       <div
         className={`flex items-center justify-center rounded-full shrink-0 size-7 transition-colors duration-200 ${
           avatar === "outline"
-            ? "bg-white border border-[#E5E7EB]"
-            : "bg-[#1A1B1F] border border-transparent"
+            ? "bg-soft"
+            : "bg-ink"
         }`}
       >
         <div
-          className={`font-[var(--font-inconsolata)] font-bold text-[11px] leading-[14px] transition-colors duration-200 ${
-            avatar === "outline" ? "text-[#1A1B1F]" : "text-white"
+          className={`font-[var(--font-inconsolata)] font-bold text-[10.5px] leading-[14px] tracking-[0.02em] transition-colors duration-200 ${
+            avatar === "outline" ? "text-ink" : "text-white"
           }`}
         >
           AN
@@ -2073,7 +2121,7 @@ function TopNav({ avatar }: { avatar: "solid" | "outline" }) {
 
 function DocTabBar({ tabDirty }: { tabDirty: boolean }) {
   return (
-    <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#E5E7EB]">
+    <div className="flex items-end h-12 shrink-0 px-4 gap-1 border-b border-hairline">
       <Tab kind="md" name="CSR-014.md" state={tabDirty ? "active-dirty" : "active-default"} />
       <div className="grow" />
       <MapButton />
@@ -2083,7 +2131,7 @@ function DocTabBar({ tabDirty }: { tabDirty: boolean }) {
 
 function CsvActiveTabBar() {
   return (
-    <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#E5E7EB]">
+    <div className="flex items-end h-12 shrink-0 px-4 gap-1 border-b border-hairline">
       <Tab kind="md" name="CSR-014.md" state="inactive" />
       <Tab
         kind="csv"
@@ -2099,7 +2147,7 @@ function CsvActiveTabBar() {
 
 function SplitTabBar() {
   return (
-    <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#E5E7EB]">
+    <div className="flex items-end h-12 shrink-0 px-4 gap-1 border-b border-hairline">
       <Tab kind="md" name="CSR-014.md" state="active-dirty" />
       <Tab kind="csv" name="Phase3-LFT-Listings.csv" state="active-dirty" />
       <div className="grow" />
@@ -2119,63 +2167,54 @@ function Tab({
   state: "inactive" | "active-default" | "active-dirty" | "active-selected";
 }) {
   const isInactive = state === "inactive";
-  const topBorderClass =
-    state === "active-dirty"
-      ? "border-t-[#FF4E49]"
-      : state === "active-selected"
-        ? "border-t-[#FF4E49]"
-        : state === "active-default"
-          ? "border-t-[#FF4E49]"
-          : "border-t-transparent";
-  const sideBorderClass = isInactive
-    ? "border-l-[#E5E7EB] border-r-[#E5E7EB]"
-    : "border-l-[#E5E7EB] border-r-[#E5E7EB]";
-  const bgClass = isInactive ? "bg-[#F1F2F4]" : "bg-white";
-  const labelColor = isInactive ? "text-[#5A5E66]" : "text-[#1A1B1F]";
-  const badgeBg =
-    kind === "csv"
-      ? "bg-[#E6FFF5]"
-      : kind === "pdf"
-        ? "bg-[#FFE0EC]"
-        : "bg-[#F6F6F6]";
-  const badgeColor =
-    kind === "csv"
-      ? "text-[#19A875]"
-      : kind === "pdf"
-        ? "text-[#FF4488]"
-        : "text-[#5A5E66]";
+  const isActive = !isInactive;
+  const bgClass = isInactive ? "bg-soft/60" : "bg-paper";
+  const labelColor = isInactive ? "text-muted" : "text-ink";
   return (
     <div
-      className={`flex items-center h-9 -mb-px px-3 gap-2 rounded-t-lg border-t border-l border-r transition-colors duration-200 ${bgClass} ${topBorderClass} ${sideBorderClass}`}
+      className={`relative flex items-center h-9 px-3.5 gap-2 rounded-t-[8px] transition-colors duration-200 ${bgClass}`}
     >
-      <div className={`rounded-[3px] py-0.5 px-1 ${badgeBg}`}>
-        <div
-          className={`font-[var(--font-inconsolata)] font-bold ${badgeColor} text-[9px] leading-3`}
-        >
-          {kind}
-        </div>
-      </div>
+      <FileTypeBadge kind={kind} />
       <div
-        className={`font-[var(--font-inconsolata)] font-medium text-[13px] leading-4 ${labelColor}`}
+        className={`font-[var(--font-inter)] font-medium text-[12.5px] leading-4 tracking-[-0.005em] ${labelColor}`}
       >
         {name}
       </div>
-      <div className="ml-1 font-[var(--font-inconsolata)] text-[#8E939A] text-sm leading-[18px]">
+      <div className="ml-0.5 font-[var(--font-inter)] text-faint text-[14px] leading-[18px] opacity-60">
         ×
       </div>
+      {isActive ? (
+        <div className="absolute left-2 right-2 -bottom-px h-[2px] bg-coral rounded-full" />
+      ) : null}
+    </div>
+  );
+}
+
+function FileTypeBadge({ kind }: { kind: "md" | "csv" | "pdf" }) {
+  const styles =
+    kind === "csv"
+      ? "bg-green-soft text-green"
+      : kind === "pdf"
+        ? "bg-pink text-pink-ink"
+        : "bg-soft text-faint";
+  return (
+    <div
+      className={`rounded-[4px] py-0.5 px-[5px] font-[var(--font-inconsolata)] font-bold text-[9.5px] leading-3 tracking-[0.02em] uppercase ${styles}`}
+    >
+      {kind}
     </div>
   );
 }
 
 function MapButton() {
   return (
-    <div className="flex items-center justify-center self-center rounded-md shrink-0 bg-white ring-1 ring-[#E5E7EB] size-8">
+    <div className="flex items-center justify-center self-center rounded-[8px] shrink-0 bg-paper border border-hairline size-8 hover:bg-soft/60 transition-colors duration-150">
       <svg
-        width="16"
-        height="16"
+        width="15"
+        height="15"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#1A1B1F"
+        stroke="#14161A"
         strokeWidth="1.5"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
@@ -2194,8 +2233,8 @@ function MapButton() {
 function SideBySideButton({ active }: { active: boolean }) {
   return (
     <div
-      className={`flex items-center self-center rounded-md py-1.5 px-2.5 gap-1.5 transition-colors duration-200 ${
-        active ? "bg-[#FF4E49]" : "bg-white ring-1 ring-[#E5E7EB]"
+      className={`flex items-center self-center rounded-[8px] py-1.5 px-2.5 gap-1.5 transition-colors duration-200 ${
+        active ? "bg-coral" : "bg-paper border border-hairline"
       }`}
     >
       <svg
@@ -2203,7 +2242,7 @@ function SideBySideButton({ active }: { active: boolean }) {
         height="14"
         viewBox="0 0 24 24"
         fill="none"
-        stroke={active ? "#FFFFFF" : "#1A1B1F"}
+        stroke={active ? "#FFFFFF" : "#14161A"}
         strokeWidth="1.5"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
@@ -2212,8 +2251,8 @@ function SideBySideButton({ active }: { active: boolean }) {
         <line x1="12" y1="4" x2="12" y2="20" />
       </svg>
       <div
-        className={`font-[var(--font-inconsolata)] text-xs leading-4 ${
-          active ? "text-white" : "text-[#1A1B1F]"
+        className={`font-[var(--font-inter)] font-medium text-[12px] leading-4 tracking-[-0.005em] ${
+          active ? "text-white" : "text-ink"
         }`}
       >
         side-by-side
@@ -2246,46 +2285,46 @@ function CSRDocBody({
   pairedPane?: boolean;
 }) {
   return (
-    <div className={`flex flex-col grow ${paddingTop} overflow-auto ${padding} min-h-0 relative`}>
-      <div className="flex items-center mb-3 gap-2.5 font-[var(--font-inconsolata)] text-[11px] leading-[14px]">
-        <span className="tracking-[0.06em] font-bold text-[#1A1B1F]">SECTION 12.4</span>
-        <span className="tracking-[0.04em] text-[#8E939A]">—</span>
-        <span className="tracking-[0.04em] text-[#5A5E66]">Phase III</span>
-        <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66]">Aurora-IV</span>
-        <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66]">Hepatic Adverse Events</span>
+    <div className={`flex flex-col grow ${paddingTop} overflow-auto ${padding} min-h-0 relative scroll-tame`}>
+      <div className="flex items-center mb-4 gap-2 font-[var(--font-inconsolata)] text-[10.5px] leading-[14px] uppercase">
+        <span className="tracking-[0.08em] font-bold text-muted">Section 12.4</span>
+        <span className="text-faint normal-case">·</span>
+        <span className="tracking-[0.04em] text-faint">Phase III</span>
+        <span className="text-faint normal-case">·</span>
+        <span className="tracking-[0.04em] text-faint">Aurora-IV</span>
+        <span className="text-faint normal-case">·</span>
+        <span className="tracking-[0.04em] text-faint">Hepatic Adverse Events</span>
       </div>
 
       <h1
-        className={`mb-[18px] min-w-0 ${pairedPane ? `${SPLIT_PANE_PAIR_TITLE} break-words` : "font-[var(--font-inter)] text-[36px] leading-[115%] tracking-[-0.005em] text-[#1A1B1F]"}`}
+        className={`mb-5 min-w-0 ${pairedPane ? `${SPLIT_PANE_PAIR_TITLE} break-words` : "font-[var(--font-display)] text-[40px] leading-[115%] tracking-[-0.015em] font-normal text-ink"}`}
       >
         Hepatic adverse events
       </h1>
 
-      <p className="text-[15px] leading-[165%] mb-6 font-[var(--font-inter)] text-[#1A1B1F]">
+      <p className="text-[15px] leading-[170%] mb-7 font-[var(--font-inter)] text-ink">
         Aurora-IV is administered orally once daily and is metabolized primarily through hepatic
         CYP3A4 pathways. The Phase III safety database includes 891 randomized participants across
         47 sites, with hepatic monitoring performed every two weeks during the first cycle and
         monthly thereafter, per the protocol&apos;s risk-management plan.
       </p>
 
-      <div className="flex flex-col mb-[18px] rounded-[10px] overflow-clip bg-white border border-[#E5E7EB]">
-        <div className="flex items-center justify-between py-3.5 px-[18px] bg-[#F1F2F4] border-b border-[#E5E7EB]">
-          <div className="flex items-baseline gap-2.5">
-            <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[11px] leading-[14px]">
-              TABLE 12.4-1
+      <div className="flex flex-col mb-6 rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
+        <div className="flex items-center justify-between py-3 px-5 bg-stripe/70 border-b border-hairline">
+          <div className="flex items-baseline gap-3">
+            <div className="tracking-[0.08em] uppercase font-[var(--font-inconsolata)] font-bold text-muted text-[10.5px] leading-[14px]">
+              Table 12.4-1
             </div>
-            <div className="font-[var(--font-inter)] italic text-[#1A1B1F] text-sm leading-[18px]">
+            <div className="font-[var(--font-inter)] text-ink text-[13.5px] leading-[18px]">
               Hepatic adverse events by grade and treatment arm
             </div>
           </div>
         </div>
 
-        <div className="flex py-2.5 px-[18px] bg-white border-b border-[#E5E7EB] font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[11px] leading-[14px] tracking-[0.06em]">
-          <div className="basis-0 grow-[2] shrink">GRADE</div>
-          <div className="basis-0 grow-[1.4] shrink text-right">AURORA-IV (n=598)</div>
-          <div className="basis-0 grow-[1.4] shrink text-right">PLACEBO (n=293)</div>
+        <div className="flex py-2.5 px-5 border-b border-hairline font-[var(--font-inconsolata)] font-bold text-muted text-[10.5px] leading-[14px] tracking-[0.08em] uppercase">
+          <div className="basis-0 grow-[2] shrink">Grade</div>
+          <div className="basis-0 grow-[1.4] shrink text-right">Aurora-IV (n=598)</div>
+          <div className="basis-0 grow-[1.4] shrink text-right">Placebo (n=293)</div>
         </div>
 
         <Row label="Grade 1 — transient" a="34  (5.7%)" b="7  (2.4%)" />
@@ -2299,14 +2338,14 @@ function CSRDocBody({
         </AnimatePresence>
         <Row label="Grade 4" a="0  (0.0%)" b="0  (0.0%)" zebra={!hideGrade3} muted />
 
-        <div className="flex items-center py-3 px-[18px] bg-white border-t border-[#1A1B1F]">
-          <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] font-semibold text-[#1A1B1F] text-sm leading-[18px]">
+        <div className="flex items-center py-3 px-5 border-t border-hairline-strong bg-stripe/40">
+          <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] font-semibold text-ink text-[13.5px] leading-[18px]">
             Total — any grade
           </div>
-          <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-sm leading-[18px]">
+          <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-ink text-[13.5px] leading-[18px]">
             49  (8.2%)
           </div>
-          <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-sm leading-[18px]">
+          <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-ink text-[13.5px] leading-[18px]">
             12  (4.1%)
           </div>
         </div>
@@ -2331,10 +2370,10 @@ function CSRDocBody({
           <motion.div
             key={`paragraph:${narrativeBody ?? "default"}`}
             {...fadeIn}
-            className="mt-[18px]"
+            className="mt-5"
           >
             <WalkthroughTarget walkthrough={walkthrough} match="editor-narrative">
-              <p className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F]">
+              <p className="text-[15px] leading-[170%] font-[var(--font-inter)] text-ink">
                 {narrativeBody ??
                   "Hepatic adverse events occurred in 8.2% of Aurora-IV recipients (n=49/598) versus 4.1% on placebo (n=12/293). Most events were Grade 1–2 transient ALT elevations, resolving without intervention within a median of 14 days. Two Grade 3 events met DILI criteria; both resolved on discontinuation. No Hy's Law cases were observed."}
               </p>
@@ -2342,7 +2381,7 @@ function CSRDocBody({
           </motion.div>
         )}
       </AnimatePresence>
-      <p className="text-[15px] leading-[165%] mt-[18px] mb-[18px] font-[var(--font-inter)] text-[#1A1B1F]">
+      <p className="text-[15px] leading-[170%] mt-5 mb-5 font-[var(--font-inter)] text-ink">
         A pre-specified subgroup analysis of participants with baseline hepatic impairment (n=42)
         showed comparable event rates and no qualitative difference in time-to-resolution.
       </p>
@@ -2359,7 +2398,7 @@ function CSRDocBody({
             {...fadeIn}
           >
             <WalkthroughTarget walkthrough={walkthrough} match="tertiary-wording">
-              <p className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F]">
+              <p className="text-[15px] leading-[170%] font-[var(--font-inter)] text-ink">
                 {tertiaryDocParagraph}
               </p>
             </WalkthroughTarget>
@@ -2389,10 +2428,10 @@ const CSV_VIEWER_ROWS: CsvViewerRow[] = [
 ];
 
 function ulnColorClass(accent: CsvViewerRow["ulnAccent"]) {
-  if (accent === "alert") return "text-[#FF4488]";
-  if (accent === "warn") return "text-[#FFAF04]";
-  if (accent === "ok") return "text-[#19A875]";
-  return "text-[#8E939A]";
+  if (accent === "alert") return "text-pink-ink font-medium";
+  if (accent === "warn") return "text-warning";
+  if (accent === "ok") return "text-green";
+  return "text-faint";
 }
 
 function CsvDocBody({
@@ -2410,57 +2449,49 @@ function CsvDocBody({
   walkthrough?: Walkthrough | null;
   pairedPane?: boolean;
 }) {
+  const evidenceFocused = walkthrough?.focus === "evidence-csv";
   return (
-    <div className={`flex flex-col grow ${paddingTop} overflow-auto ${padding} min-h-0 relative`}>
-      {walkthrough?.focus === "evidence-csv" ? (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-            <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
-              {walkthrough.title}
-            </div>
-            {walkthrough.subtitle ? (
-              <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-                {walkthrough.subtitle}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-      <div className="flex items-center mb-3 gap-2.5 font-[var(--font-inconsolata)] text-[11px] leading-[14px] whitespace-nowrap overflow-hidden">
-        <span className="tracking-[0.06em] font-bold text-[#1A1B1F] shrink-0">EVIDENCE</span>
-        <span className="tracking-[0.04em] text-[#8E939A] shrink-0">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66] shrink-0">Phase 3 LFT listings</span>
-        <span className="tracking-[0.04em] text-[#8E939A] shrink-0">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66] truncate">filtered: ALT &gt; 3×ULN · rows 412–438</span>
+    <div
+      className={`flex flex-col grow ${paddingTop} overflow-auto ${padding} min-h-0 relative ${
+        evidenceFocused ? "walkthrough-spotlight" : ""
+      }`}
+      data-walkthrough-focus={evidenceFocused ? "evidence-csv" : undefined}
+    >
+      <div className="mb-4 flex items-center gap-2 self-start rounded-full px-3 py-1.5 bg-soft/70 font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] uppercase whitespace-nowrap">
+        <span className="font-bold text-muted shrink-0">Evidence</span>
+        <span className="text-faint shrink-0 normal-case">·</span>
+        <span className="text-muted shrink-0 normal-case">Phase 3 LFT listings</span>
+        <span className="text-faint shrink-0 normal-case">·</span>
+        <span className="text-muted normal-case truncate">filtered: ALT &gt; 3×ULN · rows 412–438</span>
       </div>
 
       <div
-        className={`mb-4 flex items-end justify-between gap-4 ${pairedPane ? "min-w-0" : ""}`}
+        className={`mb-5 flex items-end justify-between gap-4 ${pairedPane ? "min-w-0" : ""}`}
       >
         <h2
-          className={`min-w-0 text-[#1A1B1F] ${pairedPane ? `${SPLIT_PANE_PAIR_TITLE} break-words` : "font-[var(--font-inter)] text-[28px] font-light leading-[120%] tracking-[-0.005em] whitespace-nowrap"}`}
+          className={`min-w-0 text-ink ${pairedPane ? `${SPLIT_PANE_PAIR_TITLE} break-words` : "font-[var(--font-display)] text-[32px] font-normal leading-[120%] tracking-[-0.015em] whitespace-nowrap"}`}
         >
           Phase3-LFT-Listings
         </h2>
         {showHeaderActions ? (
           <div className="flex items-center gap-2">
-            <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px]">
+            <div className="font-[var(--font-inconsolata)] text-faint text-[11px] leading-[14px] tracking-[0.02em]">
               27 rows · 5 cols
             </div>
-            <div className="flex items-center rounded-md py-1 px-2 gap-1.5 bg-white border border-[#E5E7EB] font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px]">
-              filter
+            <div className="flex items-center rounded-[8px] py-1.5 px-2.5 gap-1.5 bg-paper border border-hairline font-[var(--font-inter)] text-ink text-[11.5px] leading-[14px]">
+              Filter
             </div>
-            <div className="flex items-center rounded-md py-1 px-2 gap-1.5 bg-white border border-[#E5E7EB] font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px]">
-              export
+            <div className="flex items-center rounded-[8px] py-1.5 px-2.5 gap-1.5 bg-paper border border-hairline font-[var(--font-inter)] text-ink text-[11.5px] leading-[14px]">
+              Export
             </div>
           </div>
         ) : null}
       </div>
 
-      <div className="flex flex-col rounded-[10px] overflow-clip bg-white border border-[#E5E7EB]">
-        <div className="flex py-2.5 px-4 bg-[#F1F2F4] border-b border-[#E5E7EB] font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[10px] leading-3 tracking-[0.06em]">
+      <div className="flex flex-col rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
+        <div className="flex py-2.5 px-4 bg-stripe/70 border-b border-hairline font-[var(--font-inconsolata)] font-bold text-muted text-[10px] leading-3 tracking-[0.08em] uppercase">
           <div className="basis-0 grow-[1.4] shrink whitespace-nowrap">PT-ID</div>
-          <div className="basis-0 grow-[0.8] shrink whitespace-nowrap">DAY</div>
+          <div className="basis-0 grow-[0.8] shrink whitespace-nowrap">Day</div>
           <div className="basis-0 grow shrink text-right whitespace-nowrap">ALT (U/L)</div>
           <div className="basis-0 grow shrink text-right whitespace-nowrap">AST (U/L)</div>
           <div className="basis-0 grow shrink text-right whitespace-nowrap">×ULN</div>
@@ -2468,28 +2499,28 @@ function CsvDocBody({
         {CSV_VIEWER_ROWS.map((row, i) => (
           <div
             key={row.ptId}
-            className={`flex py-[9px] px-4 border-b border-[#F0F0F0] ${i % 2 === 1 ? "bg-[#F1F2F4]" : ""}`}
+            className={`flex py-2.5 px-4 ${i % 2 === 1 ? "bg-stripe/40" : ""}`}
           >
-            <div className="basis-0 grow-[1.4] shrink whitespace-nowrap font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+            <div className="basis-0 grow-[1.4] shrink whitespace-nowrap font-[var(--font-inconsolata)] text-ink text-[12.5px] leading-[16px] tabular-nums">
               {row.ptId}
             </div>
-            <div className="basis-0 grow-[0.8] shrink whitespace-nowrap font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+            <div className="basis-0 grow-[0.8] shrink whitespace-nowrap font-[var(--font-inconsolata)] text-muted text-[12.5px] leading-[16px] tabular-nums">
               {row.day}
             </div>
-            <div className="basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+            <div className="basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-ink text-[12.5px] leading-[16px] tabular-nums">
               {row.alt}
             </div>
-            <div className="basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+            <div className="basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-ink text-[12.5px] leading-[16px] tabular-nums">
               {row.ast}
             </div>
             <div
-              className={`basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-[13px] leading-4 ${ulnColorClass(row.ulnAccent)}`}
+              className={`basis-0 grow shrink text-right whitespace-nowrap font-[var(--font-inconsolata)] text-[12.5px] leading-[16px] tabular-nums ${ulnColorClass(row.ulnAccent)}`}
             >
               {row.uln}
             </div>
           </div>
         ))}
-        <div className="flex py-[9px] px-4 font-[var(--font-inconsolata)] text-[#8E939A] text-[13px] leading-4">
+        <div className="flex py-2.5 px-4 border-t border-hairline font-[var(--font-inconsolata)] text-faint text-[12.5px] leading-[16px]">
           <div className="basis-0 grow-[1.4] shrink">…</div>
           <div className="basis-0 grow-[0.8] shrink">…</div>
           <div className="basis-0 grow shrink text-right">…</div>
@@ -2499,14 +2530,15 @@ function CsvDocBody({
       </div>
 
       {showFooterAction ? (
-        <div className="flex items-center mt-3.5 gap-2 font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px]">
+        <div className="flex items-center mt-4 gap-2 font-[var(--font-inter)] text-faint text-[11.5px] leading-[14px]">
           <svg
             width="11"
             height="11"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#8E939A"
+            stroke="currentColor"
             strokeWidth="1.5"
+            strokeLinecap="round"
             xmlns="http://www.w3.org/2000/svg"
             className="shrink-0"
           >
@@ -2632,13 +2664,19 @@ function SideBySideFrame({
   tertiaryFollowUps,
   walkthrough,
 }: SharedFrameProps) {
+  const splitFocused = walkthrough?.focus === "split-view";
   return (
     <div className="[font-synthesis:none] flex items-stretch gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
-      <div className={`${FLOAT_COL} relative min-h-0 min-w-0 flex-1`}>
+      <div
+        className={`${FLOAT_COL} relative min-h-0 min-w-0 flex-1 ${
+          splitFocused ? "walkthrough-spotlight" : ""
+        }`}
+        data-walkthrough-focus={splitFocused ? "split-view" : undefined}
+      >
         <div className="shrink-0">
           <SplitTabBar />
         </div>
-        <div className="flex min-h-0 flex-1 flex-row divide-x divide-[#E5E7EB]">
+        <div className="flex min-h-0 flex-1 flex-row divide-x divide-hairline">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <CSRDocBody
               hideGrade3={hideGrade3}
@@ -2662,20 +2700,6 @@ function SideBySideFrame({
             />
           </div>
         </div>
-        {walkthrough?.focus === "split-view" ? (
-          <div className="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2">
-            <div className="flex max-w-[300px] flex-col gap-0.5 rounded-md border border-[var(--color-walkthrough-ring)] bg-white px-2.5 py-1.5 shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-              <div className="font-[var(--font-inter)] text-[11px] font-semibold leading-[14px] tracking-[-0.005em] whitespace-nowrap text-[var(--color-walkthrough-ink)]">
-                {walkthrough.title}
-              </div>
-              {walkthrough.subtitle ? (
-                <div className="font-[var(--font-inter)] text-[10.5px] leading-[14px] text-[#5A5E66]">
-                  {walkthrough.subtitle}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </div>
       <CopilotRail
         messages={messages}
@@ -2703,7 +2727,7 @@ function SideBySideFrame({
 
 function ProtocolTabBar() {
   return (
-    <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#E5E7EB]">
+    <div className="flex items-end h-12 shrink-0 px-4 gap-1 border-b border-hairline">
       <Tab kind="md" name="CSR-014.md" state="inactive" />
       <Tab kind="pdf" name="Aurora-IV_Protocol_v4.2" state="active-selected" />
       <div className="grow" />
@@ -2715,29 +2739,29 @@ function ProtocolTabBar() {
 
 function ProtocolDocBody({ padding }: { padding: string }) {
   return (
-    <div className={`flex flex-col grow pt-8 overflow-auto ${padding} min-h-0 relative`}>
-      <div className="flex items-center mb-3 gap-2.5 font-[var(--font-inconsolata)] text-[11px] leading-[14px]">
-        <span className="tracking-[0.06em] font-bold text-[#1A1B1F]">SECTION 6.3</span>
-        <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66]">Aurora-IV Protocol v4.2</span>
-        <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-        <span className="tracking-[0.04em] text-[#5A5E66]">Hepatic safety monitoring</span>
+    <div className={`flex flex-col grow pt-10 overflow-auto ${padding} min-h-0 relative scroll-tame`}>
+      <div className="flex items-center mb-4 gap-2 font-[var(--font-inconsolata)] text-[10.5px] leading-[14px] uppercase">
+        <span className="tracking-[0.08em] font-bold text-muted">Section 6.3</span>
+        <span className="text-faint normal-case">·</span>
+        <span className="tracking-[0.04em] text-faint">Aurora-IV Protocol v4.2</span>
+        <span className="text-faint normal-case">·</span>
+        <span className="tracking-[0.04em] text-faint">Hepatic safety monitoring</span>
       </div>
 
-      <h1 className="text-[34px] leading-[115%] tracking-[-0.005em] mb-[18px] font-[var(--font-inter)] text-[#1A1B1F]">
+      <h1 className="text-[36px] leading-[115%] tracking-[-0.015em] mb-5 font-[var(--font-display)] font-normal text-ink">
         Hepatic safety monitoring
       </h1>
 
-      <p className="text-[15px] leading-[165%] mb-[18px] font-[var(--font-inter)] text-[#1A1B1F]">
+      <p className="text-[15px] leading-[170%] mb-6 font-[var(--font-inter)] text-ink">
         Liver function tests are obtained at screening, biweekly during the first cycle, and
         monthly thereafter. Participants with ALT or AST &gt; 3× ULN repeat within 72 hours;
         sustained elevations trigger discontinuation per the rules below.
       </p>
 
-      <div className="flex flex-col mb-[18px] rounded-[10px] overflow-clip bg-white border border-[#E5E7EB]">
-        <div className="flex py-3 px-[18px] bg-[#F1F2F4] border-b border-[#E5E7EB]">
-          <div className="tracking-[0.06em] grow font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[10px] leading-3">
-            DEFINITIONS
+      <div className="flex flex-col mb-6 rounded-[14px] overflow-clip bg-paper border border-hairline shadow-card">
+        <div className="flex py-2.5 px-5 bg-stripe/70 border-b border-hairline">
+          <div className="tracking-[0.08em] uppercase grow font-[var(--font-inconsolata)] font-bold text-muted text-[10.5px] leading-3">
+            Definitions
           </div>
         </div>
         <DefinitionRow
@@ -2755,7 +2779,7 @@ function ProtocolDocBody({ padding }: { padding: string }) {
         />
       </div>
 
-      <p className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F]">
+      <p className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#14161A]">
         Permanent discontinuation is required for ALT or AST &gt; 8× ULN, or for ALT or AST &gt;
         3× ULN with concurrent symptoms (fatigue, nausea, jaundice, right upper quadrant pain)
         lasting &gt; 4 weeks.
@@ -2775,12 +2799,12 @@ function DefinitionRow({
 }) {
   return (
     <div
-      className={`flex py-3.5 px-[18px] gap-[18px] ${zebra ? "bg-[#F1F2F4]" : ""}`}
+      className={`grid grid-cols-[112px_1fr] gap-5 py-3.5 px-5 ${zebra ? "bg-stripe/40" : ""}`}
     >
-      <div className="w-20 shrink-0 font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-[11px] leading-[14px]">
+      <div className="font-[var(--font-display)] font-medium text-ink text-[13.5px] leading-[18px]">
         {term}
       </div>
-      <div className="text-[13px] leading-[155%] grow font-[var(--font-inter)] text-[#1A1B1F]">
+      <div className="text-[13.5px] leading-[160%] font-[var(--font-inter)] text-muted">
         {def}
       </div>
     </div>
@@ -2814,12 +2838,10 @@ function ProtocolFrame({
         className={`relative ${FLOAT_COL} flex-1 min-w-0 ${
           walkthrough?.focus === "protocol-doc" ? "walkthrough-spotlight" : ""
         }`}
+        data-walkthrough-focus={
+          walkthrough?.focus === "protocol-doc" ? "protocol-doc" : undefined
+        }
       >
-        {walkthrough?.focus === "protocol-doc" ? (
-          <div className="absolute left-1/2 top-14 -translate-x-1/2 z-50 pointer-events-none px-3 w-full max-w-[380px] flex justify-center">
-            <WalkthroughCalloutChip walkthrough={walkthrough} />
-          </div>
-        ) : null}
         <ProtocolTabBar />
         <ProtocolDocBody padding="px-20" />
       </div>
@@ -2850,77 +2872,66 @@ function ProtocolFrame({
 function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
   const focused = walkthrough?.focus === "trace-graph";
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-warm/65 backdrop-blur-[1px] px-6">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-warm/70 backdrop-blur-md px-6">
       <div
-        className={`flex flex-col w-full max-w-[1090px] rounded-2xl bg-white border border-[#E5E7EB] shadow-[0_24px_48px_rgba(15,18,22,0.18)] overflow-hidden relative ${
+        className={`flex flex-col w-full max-w-[1090px] rounded-[20px] bg-paper shadow-modal overflow-hidden relative ${
           focused ? "walkthrough-spotlight" : ""
         }`}
+        data-walkthrough-focus={focused ? "trace-graph" : undefined}
       >
-        {focused && walkthrough ? (
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 pointer-events-none">
-            <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-              <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
-                {walkthrough.title}
-              </div>
-              {walkthrough.subtitle ? (
-                <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-                  {walkthrough.subtitle}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E5E7EB] gap-4 shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-hairline gap-4 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <svg
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#1A1B1F"
+              stroke="#14161A"
               strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
             >
-              <polygon points="3,6 9,3 15,6 21,3 21,18 15,21 9,18 3,21" strokeLinejoin="round" />
+              <polygon points="3,6 9,3 15,6 21,3 21,18 15,21 9,18 3,21" />
               <line x1="9" y1="3" x2="9" y2="18" />
               <line x1="15" y1="6" x2="15" y2="21" />
             </svg>
-            <div className="font-[var(--font-inter)] font-medium text-[#1A1B1F] text-[15px] leading-5 truncate">
-              Aurora-IV — Phase III CSR · Traceability
+            <div className="font-[var(--font-display)] font-normal text-ink text-[18px] leading-[22px] truncate tracking-[-0.01em]">
+              Aurora-IV · Phase III CSR · Traceability
             </div>
           </div>
           <div className="flex items-center gap-2 font-[var(--font-inconsolata)] text-[11px] leading-[14px] shrink-0">
-            <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-[#F6F6F6]">
-              <div className="rounded-full size-1.5 bg-[#19A875]" />
-              <span className="text-[#5A5E66]">11 nodes · 14 edges · synced</span>
+            <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-soft/70">
+              <div className="rounded-full size-1.5 bg-green" />
+              <span className="text-muted">11 nodes · 14 edges</span>
             </div>
-            <div className="flex items-center rounded-md border border-[#E5E7EB]">
-              <div className="px-2 py-1 text-[#1A1B1F] border-r border-[#E5E7EB]">−</div>
-              <div className="px-2 py-1 text-[#1A1B1F] border-r border-[#E5E7EB]">100%</div>
-              <div className="px-2 py-1 text-[#1A1B1F] border-r border-[#E5E7EB]">+</div>
-              <div className="px-2 py-1 text-[#1A1B1F]">⤢ fit</div>
+            <div className="flex items-center rounded-[8px] bg-paper border border-hairline overflow-hidden">
+              <div className="px-2.5 py-1 text-muted border-r border-hairline">−</div>
+              <div className="px-2.5 py-1 text-ink border-r border-hairline tabular-nums">100%</div>
+              <div className="px-2.5 py-1 text-muted border-r border-hairline">+</div>
+              <div className="px-2.5 py-1 text-faint">⤢ fit</div>
             </div>
-            <div className="text-[#1A1B1F] text-sm leading-4 px-1.5 py-1">×</div>
+            <div className="text-muted text-base leading-4 px-2 py-1">×</div>
           </div>
         </div>
-        <div className="grow relative overflow-hidden bg-white" style={{ aspectRatio: "1090 / 560" }}>
+        <div className="grow relative overflow-hidden bg-paper" style={{ aspectRatio: "1090 / 560" }}>
           <TraceMapCanvas />
         </div>
-        <div className="flex items-center justify-between px-5 py-2.5 border-t border-[#E5E7EB] font-[var(--font-inconsolata)] text-[11px] leading-[14px] text-[#8E939A] shrink-0">
+        <div className="flex items-center justify-between px-5 py-2.5 border-t border-hairline font-[var(--font-inter)] text-[11px] leading-[14px] text-faint shrink-0">
           <div>drag to pan · scroll to zoom · click a node to open as tab</div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <div className="size-2 rounded-[2px] border border-[#1A1B1F] bg-white" />
-              <span className="text-[#5A5E66]">current</span>
+              <div className="size-2 rounded-[3px] border border-coral bg-coral-soft" />
+              <span className="text-muted">current</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-[2px] bg-[#FF4E49]" />
-              <span className="text-[#5A5E66]">strong</span>
+              <div className="w-3 h-[2px] bg-coral rounded-full" />
+              <span className="text-muted">strong</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-px bg-[#E5E7EB]" />
-              <span className="text-[#5A5E66]">moderate</span>
+              <div className="w-3 h-px bg-hairline-strong" />
+              <span className="text-muted">moderate</span>
             </div>
           </div>
         </div>
@@ -2967,7 +2978,7 @@ function TraceMapCanvas() {
       >
         <defs>
           <marker id="arrow-muted" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M 0 0 L 6 3 L 0 6 z" fill="#E5E7EB" />
+            <path d="M 0 0 L 6 3 L 0 6 z" fill="#EBE9E1" />
           </marker>
           <marker id="arrow-strong" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
             <path d="M 0 0 L 6 3 L 0 6 z" fill="#FF4E49" />
@@ -2976,7 +2987,7 @@ function TraceMapCanvas() {
         {/* incoming edges from left column → CSR-014.md */}
         <path
           d="M 214 78 L 360 78 L 360 200 L 462 200"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -2992,7 +3003,7 @@ function TraceMapCanvas() {
         />
         <path
           d="M 214 254 L 380 254 L 380 214 L 462 214"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -3000,7 +3011,7 @@ function TraceMapCanvas() {
         />
         <path
           d="M 214 342 L 360 342 L 360 220 L 462 220"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.2"
           strokeDasharray="3 3"
           fill="none"
@@ -3010,7 +3021,7 @@ function TraceMapCanvas() {
         {/* SAP / IB → CSR */}
         <path
           d="M 414 122 L 450 122 L 450 204 L 462 204"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -3018,7 +3029,7 @@ function TraceMapCanvas() {
         />
         <path
           d="M 414 298 L 450 298 L 450 216 L 462 216"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -3044,7 +3055,7 @@ function TraceMapCanvas() {
         {/* Module-2.5 → Reviewer-QA / Module-2.7 → DSUR-2025 */}
         <path
           d="M 814 122 L 850 122 L 850 166 L 870 166"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -3052,7 +3063,7 @@ function TraceMapCanvas() {
         />
         <path
           d="M 814 298 L 850 298 L 850 226 L 870 226"
-          stroke="#E5E7EB"
+          stroke="#EBE9E1"
           strokeWidth="1.5"
           fill="none"
           markerEnd="url(#arrow-muted)"
@@ -3081,7 +3092,7 @@ function TraceMapCanvas() {
 
       {/* minimap */}
       <div
-        className="absolute rounded-md border border-[#E5E7EB] bg-white shadow-sm overflow-hidden"
+        className="absolute rounded-[8px] bg-paper/90 backdrop-blur-sm border border-hairline shadow-card overflow-hidden"
         style={{
           right: `${(18 / W) * 100}%`,
           bottom: `${(18 / H) * 100}%`,
@@ -3089,12 +3100,12 @@ function TraceMapCanvas() {
           height: `${(80 / H) * 100}%`,
         }}
       >
-        <div className="absolute inset-0 grid grid-cols-5 grid-rows-3 gap-px p-1">
+        <div className="absolute inset-0 grid grid-cols-5 grid-rows-3 gap-px p-1.5">
           {Array.from({ length: 15 }).map((_, i) => (
             <div
               key={i}
-              className={`rounded-[1px] ${
-                i === 7 ? "bg-[#FF4E49]" : i % 3 === 0 ? "bg-[#E5E7EB]" : "bg-[#F6F6F6]"
+              className={`rounded-[2px] ${
+                i === 7 ? "bg-coral" : i % 3 === 0 ? "bg-hairline-strong" : "bg-soft"
               }`}
             />
           ))}
@@ -3115,10 +3126,10 @@ function TraceEdgeLabel({
 }) {
   return (
     <div
-      className="absolute rounded-[3px] py-px px-1.5 bg-white border border-[#E5E7EB] -translate-y-1/2"
+      className="absolute rounded-full py-0.5 px-2 bg-paper border border-hairline -translate-y-1/2 shadow-card"
       style={{ left: `${left}%`, top: `${top}%` }}
     >
-      <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3 whitespace-nowrap">
+      <div className="font-[var(--font-inconsolata)] text-muted text-[10px] leading-3 whitespace-nowrap tracking-[0.02em]">
         {label}
       </div>
     </div>
@@ -3144,24 +3155,18 @@ function TraceNode({
   sub: string;
   highlight?: boolean;
 }) {
-  const badgeBg =
+  const badgeStyles =
     badge === "csv"
-      ? "bg-[#E6FFF5]"
+      ? "bg-green-soft text-green"
       : badge === "pdf"
-        ? "bg-[#FFE0EC]"
-        : "bg-[#F6F6F6]";
-  const badgeColor =
-    badge === "csv"
-      ? "text-[#19A875]"
-      : badge === "pdf"
-        ? "text-[#FF4488]"
-        : "text-[#5A5E66]";
+        ? "bg-pink text-pink-ink"
+        : "bg-soft text-faint";
   return (
     <div
-      className={`absolute flex items-center gap-2 px-3 rounded-lg bg-white border transition-shadow ${
+      className={`absolute flex items-center gap-2 px-3 rounded-[14px] bg-paper transition-shadow ${
         highlight
-          ? "border-[1.5px] border-[#FF4E49] shadow-[0_0_0_8px_rgba(255,78,73,0.08),0_2px_8px_rgba(255,78,73,0.15)]"
-          : "border-[#E5E7EB] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+          ? "ring-[1.5px] ring-coral shadow-[0_0_0_6px_rgba(255,78,73,0.08),0_4px_14px_-4px_rgba(255,78,73,0.20)]"
+          : "border border-hairline shadow-card"
       }`}
       style={{
         left: `${left}%`,
@@ -3170,16 +3175,14 @@ function TraceNode({
         height: `${height}%`,
       }}
     >
-      <div className={`rounded-[3px] py-0.5 px-1 shrink-0 ${badgeBg}`}>
-        <div className={`font-[var(--font-inconsolata)] font-bold text-[9px] leading-3 ${badgeColor}`}>
-          {badge}
-        </div>
+      <div className={`rounded-[4px] py-0.5 px-[5px] shrink-0 font-[var(--font-inconsolata)] font-bold text-[9.5px] leading-3 tracking-[0.02em] uppercase ${badgeStyles}`}>
+        {badge}
       </div>
       <div className="flex flex-col min-w-0">
-        <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px] truncate">
+        <div className="font-[var(--font-inconsolata)] text-ink text-[11px] leading-[14px] truncate">
           {name}
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 truncate">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[9.5px] leading-[12px] truncate">
           {sub}
         </div>
       </div>
@@ -3255,17 +3258,21 @@ function TraceMapFrame({
 
 function PreparingBlock({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col mt-[18px] py-3 px-4 gap-2.5 bg-[#FFF8E5] border-l-[3px] border-l-[#FFAF04] rounded-r-md">
+    <div className="flex flex-col mt-[18px] py-2.5 px-4 gap-2 bg-warning-soft/70 border-l-[2px] border-l-warning rounded-r-[8px]">
       <div className="flex items-center gap-2">
-        <div className="rounded-full shrink-0 bg-[#FFAF04] size-1.5" />
-        <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[10px] leading-3">
-          PREPARING
+        <motion.div
+          className="rounded-full shrink-0 bg-warning size-1.5"
+          animate={{ opacity: [1, 0.4, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-muted text-[10px] leading-3 uppercase">
+          Preparing
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+        <div className="font-[var(--font-inter)] text-muted text-[11.5px] leading-[14px]">
           §12.4 hepatic AE narrative · awaiting clarification
         </div>
       </div>
-      <div className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F]">
+      <div className="text-[15px] leading-[165%] font-[var(--font-inter)] text-ink">
         {children}
       </div>
     </div>
@@ -3275,7 +3282,7 @@ function PreparingBlock({ children }: { children: React.ReactNode }) {
 function NarrativeDraftBlock({ draft }: { draft: NarrativeDraft }) {
   const versionKey = `${draft.version}-${draft.framing}`;
   return (
-    <div className="flex flex-col mt-[18px] py-3.5 px-[18px] gap-3 bg-[#FFF8E5] border-l-[3px] border-l-[#FFAF04] rounded-r-md">
+    <div className="flex flex-col mt-[18px] py-3 px-[18px] gap-3 bg-warning-soft/60 border-l-[2px] border-l-warning rounded-r-[8px]">
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5">
           <PrevNextNav size="md" />
@@ -3283,46 +3290,35 @@ function NarrativeDraftBlock({ draft }: { draft: NarrativeDraft }) {
             <motion.div
               key={versionKey}
               {...fadeIn}
-              className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-xs leading-4"
+              className="font-[var(--font-inconsolata)] text-ink text-[12px] leading-4"
             >
-              v{draft.version} of {draft.total} · {draft.framing}
+              v{draft.version} of {draft.total} · <span className="text-muted">{draft.framing}</span>
             </motion.div>
           </AnimatePresence>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="flex items-center rounded-md py-[5px] px-2.5 gap-[5px] bg-[#FF4E49]">
+          <div className="flex items-center rounded-[8px] py-1 px-2.5 gap-1.5 bg-coral shadow-card">
             <svg
               width="11"
               height="11"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#FFFFFF"
-              strokeWidth="3"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
             >
               <polyline points="5,12 10,17 19,7" />
             </svg>
-            <div className="font-[var(--font-inconsolata)] font-bold text-white text-[11px] leading-[14px]">
-              accept
+            <div className="font-[var(--font-inter)] font-medium text-white text-[11.5px] leading-[14px]">
+              Accept
             </div>
           </div>
-          <div className="flex items-center rounded-md py-[5px] px-2.5 gap-[5px] bg-white border border-[#E5E7EB]">
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#5A5E66"
-              strokeWidth="2.5"
-              xmlns="http://www.w3.org/2000/svg"
-              className="shrink-0"
-            >
-              <line x1="6" y1="6" x2="18" y2="18" />
-              <line x1="18" y1="6" x2="6" y2="18" />
-            </svg>
-            <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
-              cancel
+          <div className="flex items-center rounded-[8px] py-1 px-2.5 gap-1.5 bg-paper border border-hairline">
+            <div className="font-[var(--font-inter)] text-muted text-[11.5px] leading-[14px]">
+              Cancel
             </div>
           </div>
         </div>
@@ -3331,7 +3327,7 @@ function NarrativeDraftBlock({ draft }: { draft: NarrativeDraft }) {
         <motion.div
           key={`body-${versionKey}`}
           {...fadeIn}
-          className="text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F]"
+          className="text-[15px] leading-[165%] font-[var(--font-inter)] text-ink"
         >
           {draft.body}
         </motion.div>
@@ -3342,18 +3338,15 @@ function NarrativeDraftBlock({ draft }: { draft: NarrativeDraft }) {
 
 function PrevNextNav({ size }: { size: "sm" | "md" }) {
   const isMd = size === "md";
-  const padX = isMd ? "px-[9px]" : "px-2";
-  const padY = isMd ? "py-1" : "py-[3px]";
-  const fontSize = isMd ? "text-sm leading-[18px]" : "text-[13px] leading-4";
-  const sepHeight = isMd ? "h-3.5" : "h-3";
+  const buttonSize = isMd ? "size-7" : "size-6";
+  const fontSize = isMd ? "text-[14px]" : "text-[12px]";
   return (
-    <div className="flex items-center rounded-md bg-white border border-[#E5E7EB]">
-      <div className={`${padY} ${padX}`}>
-        <div className={`font-[var(--font-inconsolata)] text-[#1A1B1F] ${fontSize}`}>‹</div>
+    <div className="flex items-center gap-1">
+      <div className={`flex items-center justify-center rounded-full bg-paper border border-hairline ${buttonSize}`}>
+        <div className={`font-[var(--font-inconsolata)] text-muted leading-none ${fontSize}`}>‹</div>
       </div>
-      <div className={`w-px ${sepHeight} shrink-0 bg-[#E5E7EB]`} />
-      <div className={`${padY} ${padX}`}>
-        <div className={`font-[var(--font-inconsolata)] text-[#FF4E49] ${fontSize}`}>›</div>
+      <div className={`flex items-center justify-center rounded-full bg-paper border border-hairline ${buttonSize}`}>
+        <div className={`font-[var(--font-inconsolata)] text-coral leading-none ${fontSize}`}>›</div>
       </div>
     </div>
   );
@@ -3361,7 +3354,7 @@ function PrevNextNav({ size }: { size: "sm" | "md" }) {
 
 function ReasonedChipView({ label, expanded }: { label: string; expanded?: boolean }) {
   return (
-    <div className="flex items-center rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#E5E7EB]">
+    <div className="flex items-center rounded-full py-1 px-3 gap-2 bg-soft/70">
       <svg
         width="11"
         height="11"
@@ -3369,21 +3362,31 @@ function ReasonedChipView({ label, expanded }: { label: string; expanded?: boole
         fill="none"
         stroke="#19A875"
         strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
       >
         <polyline points="5,12 10,17 19,7" />
       </svg>
-      <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+      <div className="font-[var(--font-inter)] text-muted text-[11.5px] leading-[14px]">
         {label}
       </div>
-      <div
-        className={`font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px] transition-transform duration-200 ${
-          expanded ? "rotate-0" : "rotate-180"
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`shrink-0 text-faint transition-transform duration-200 ${
+          expanded ? "rotate-180" : "rotate-0"
         }`}
       >
-        ▾
-      </div>
+        <polyline points="6,9 12,15 18,9" />
+      </svg>
     </div>
   );
 }
@@ -3391,43 +3394,47 @@ function ReasonedChipView({ label, expanded }: { label: string; expanded?: boole
 function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview }) {
   const key = `${preview.version}-${preview.framing}`;
   return (
-    <div className="flex flex-col rounded-[10px] overflow-clip bg-white border border-[#E5E7EB]">
-      <div className="flex items-center justify-between py-2 px-3 gap-2 border-b border-[#E5E7EB]">
+    <div className="flex flex-col rounded-[14px] overflow-clip bg-paper shadow-pop">
+      <div className="flex items-center justify-between py-2 px-3 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <PrevNextNav size="sm" />
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={key}
               {...fadeIn}
-              className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px] truncate"
+              className="font-[var(--font-inconsolata)] text-ink text-[11px] leading-[14px] truncate tracking-[0.01em]"
             >
-              v{preview.version} of {preview.total} · {preview.framing}
+              v{preview.version} of {preview.total} <span className="text-faint">·</span> <span className="text-muted">{preview.framing}</span>
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <div className="flex items-center justify-center size-[22px] rounded-md bg-[#FF4E49]">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center justify-center size-[26px] rounded-full bg-coral shadow-card">
             <svg
-              width="10"
-              height="10"
+              width="11"
+              height="11"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#FFFFFF"
-              strokeWidth="3"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
             >
               <polyline points="5,12 10,17 19,7" />
             </svg>
           </div>
-          <div className="flex items-center justify-center size-[22px] rounded-md bg-white border border-[#E5E7EB]">
+          <div className="flex items-center justify-center size-[26px] rounded-full bg-paper border border-hairline">
             <svg
               width="10"
               height="10"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#5A5E66"
-              strokeWidth="2.5"
+              stroke="#62656B"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
             >
@@ -3437,14 +3444,22 @@ function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview
           </div>
         </div>
       </div>
+      <div className="hairline-fade" />
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={`p-${key}`} {...fadeIn} className="py-2.5 px-3">
-          <div className="text-[12px] leading-[150%] font-[var(--font-inter)] text-[#5A5E66]">
+        <motion.div key={`p-${key}`} {...fadeIn} className="pt-2.5 pb-3 px-3.5">
+          <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-ink">
             {preview.preview}
           </div>
           {preview.tags && preview.tags.length > 0 ? (
-            <div className="mt-1.5 font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-[14px] tracking-[0.04em] truncate">
-              {preview.tags.join(" · ")}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {preview.tags.map((t) => (
+                <div
+                  key={t}
+                  className="rounded-full px-2 py-0.5 bg-soft/80 font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.02em] uppercase"
+                >
+                  {t}
+                </div>
+              ))}
             </div>
           ) : null}
         </motion.div>
@@ -3455,7 +3470,7 @@ function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview
 
 function AcceptedChipView({ chip }: { chip: AcceptedChip }) {
   return (
-    <div className="flex items-center rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#E5E7EB]">
+    <div className="flex items-center rounded-full py-1 px-3 gap-2 bg-green-soft/70">
       <svg
         width="11"
         height="11"
@@ -3463,12 +3478,14 @@ function AcceptedChipView({ chip }: { chip: AcceptedChip }) {
         fill="none"
         stroke="#19A875"
         strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
       >
         <polyline points="5,12 10,17 19,7" />
       </svg>
-      <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+      <div className="font-[var(--font-inter)] text-green text-[11.5px] leading-[14px] font-medium">
         {chip.label}
       </div>
       {chip.revisit ? (
@@ -3479,8 +3496,10 @@ function AcceptedChipView({ chip }: { chip: AcceptedChip }) {
           fill="none"
           stroke="#FF4E49"
           strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           xmlns="http://www.w3.org/2000/svg"
-          className="shrink-0"
+          className="shrink-0 ml-0.5"
         >
           <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
           <polyline points="3,3 3,8 8,8" />
@@ -3492,13 +3511,21 @@ function AcceptedChipView({ chip }: { chip: AcceptedChip }) {
 
 function FollowUpPill({ label }: { label: string }) {
   return (
-    <div className="flex items-center rounded-full py-1.5 px-[11px] gap-2 bg-white border border-[#E5E7EB]">
-      <div className="font-[var(--font-inter)] font-semibold text-[#FF4E49] text-[11px] leading-[14px]">
-        ✻
-      </div>
-      <div className="font-[var(--font-inter)] text-[#1A1B1F] text-xs leading-4">
-        {label}
-      </div>
+    <div className="flex items-center rounded-full py-1.5 px-3 gap-1.5 bg-paper border border-hairline">
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="shrink-0 text-faint"
+      >
+        <polyline points="9,6 15,12 9,18" />
+      </svg>
+      <div className="font-[var(--font-inter)] text-ink text-[12px] leading-4">{label}</div>
     </div>
   );
 }
@@ -3508,41 +3535,35 @@ function ClarifyCardView({ card }: { card: ClarifyCard }) {
   const answered = card.status === "answered";
 
   return (
-    <div className="flex flex-col rounded-[10px] bg-white border border-[#E5E7EB]">
-      <div className="flex items-center justify-between pt-3 pb-1 px-3.5">
-        <div className="flex items-center gap-1.5">
+    <div className="flex flex-col rounded-[14px] bg-paper shadow-pop">
+      <div className="flex items-center justify-between pt-3.5 pb-1 px-4">
+        <div className="flex items-center gap-2">
           {tabs.map((n) => {
             const completed = answered || n < card.current;
             const active = !answered && n === card.current;
-            const symbol = completed ? "✓" : String(n);
             return (
               <div
                 key={n}
-                className={`w-[14px] h-[14px] flex items-center justify-center rounded-sm shrink-0 transition-colors duration-200 ${
-                  completed
-                    ? "bg-[#19A875] border border-transparent"
-                    : active
-                    ? "bg-[#FF4E49] border border-transparent"
-                    : "bg-white border border-[#E5E7EB]"
-                }`}
+                className="flex items-center gap-1.5 transition-colors duration-200"
               >
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={symbol}
-                    {...fadeIn}
-                    className={`font-[var(--font-inconsolata)] font-bold text-[9px] leading-3 ${
-                      completed || active ? "text-white" : "text-[#8E939A]"
-                    }`}
-                  >
-                    {symbol}
-                  </motion.div>
-                </AnimatePresence>
+                <div
+                  className={`size-1.5 rounded-full transition-colors duration-200 ${
+                    completed ? "bg-green" : active ? "bg-coral" : "bg-hairline"
+                  }`}
+                />
+                <div
+                  className={`font-[var(--font-inconsolata)] text-[10px] leading-[14px] tracking-[0.02em] transition-colors duration-200 ${
+                    completed ? "text-green" : active ? "text-coral" : "text-faint"
+                  }`}
+                >
+                  Q{n}
+                </div>
               </div>
             );
           })}
         </div>
         {!answered ? (
-          <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-[14px] tracking-[0.04em]">
+          <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.02em]">
             {card.current} / {card.total}
           </div>
         ) : null}
@@ -3553,22 +3574,22 @@ function ClarifyCardView({ card }: { card: ClarifyCard }) {
           <motion.div
             key="answered"
             {...fadeIn}
-            className="flex flex-col pb-2 px-2.5"
+            className="flex flex-col pb-3 px-3"
           >
-            <div className="flex items-center gap-2.5 p-2.5">
-              <div className="grow font-[var(--font-inter)] italic text-[#5A5E66] text-[13px] leading-4">
+            <div className="flex items-center gap-2.5 px-1.5 pt-2 pb-1">
+              <div className="grow font-[var(--font-inter)] italic text-muted text-[13px] leading-[155%]">
                 {card.answeredText ?? "All questions answered…"}
               </div>
             </div>
           </motion.div>
         ) : (
           <motion.div key="question" {...fadeIn}>
-            <div className="pt-1.5 pb-2.5 px-3.5">
+            <div className="pt-2 pb-3.5 px-4">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={card.question}
                   {...fadeIn}
-                  className="text-[15px] leading-[140%] font-[var(--font-inter)] font-medium text-[#1A1B1F]"
+                  className="text-[16px] leading-[135%] font-[var(--font-display)] font-medium text-ink tracking-[-0.01em]"
                 >
                   {card.question}
                 </motion.div>
@@ -3584,17 +3605,18 @@ function ClarifyCardView({ card }: { card: ClarifyCard }) {
 
 function ClarifyOptions({ card }: { card: ClarifyCard }) {
   return (
-    <div className="flex flex-col pb-2 gap-1 px-2.5">
+    <div className="flex flex-col pb-3 gap-1.5 px-3">
       {(card.options ?? []).map((opt, i) => (
-          <div
+          <motion.div
             key={i}
-            className={`flex items-center rounded-md gap-2.5 p-2.5 transition-colors duration-200 ${
+            whileTap={{ scale: 0.99 }}
+            className={`flex items-center rounded-[10px] gap-2.5 py-2.5 px-3 transition-colors duration-200 ${
               opt.selected
-                ? "bg-[#FFF5F4] border border-[#FF4E49]"
-                : "bg-white border border-[#E5E7EB]"
+                ? "bg-coral-soft"
+                : "bg-soft/50"
             }`}
           >
-            <div className="grow font-[var(--font-inter)] text-[#1A1B1F] text-[13px] leading-4">
+            <div className="grow font-[var(--font-inter)] text-ink text-[13px] leading-[18px]">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={opt.label} {...fadeIn}>
                   {opt.label}
@@ -3606,12 +3628,14 @@ function ClarifyOptions({ card }: { card: ClarifyCard }) {
                 <motion.svg
                   key="check"
                   {...fadeIn}
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="#FF4E49"
-                  strokeWidth="2"
+                  strokeWidth="2.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   xmlns="http://www.w3.org/2000/svg"
                   className="shrink-0"
                 >
@@ -3619,19 +3643,19 @@ function ClarifyOptions({ card }: { card: ClarifyCard }) {
                 </motion.svg>
               ) : null}
             </AnimatePresence>
-          </div>
+          </motion.div>
         ))}
 
         {card.somethingElseText ? (
-          <div className="flex items-center gap-2.5 p-2.5">
+          <div className="flex items-center gap-2.5 py-2 px-3">
             {card.shortcut ? (
-              <div className="w-[18px] h-[18px] flex items-center justify-center shrink-0 rounded-sm border border-dashed border-[#E5E7EB]">
-                <div className="font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[10px] leading-3">
+              <div className="w-[18px] h-[18px] flex items-center justify-center shrink-0 rounded-[4px] border border-dashed border-hairline-strong">
+                <div className="font-[var(--font-inconsolata)] font-bold text-faint text-[10px] leading-3">
                   {card.shortcut}
                 </div>
               </div>
             ) : null}
-            <div className="grow font-[var(--font-inter)] italic text-[#5A5E66] text-[13px] leading-4">
+            <div className="grow font-[var(--font-inter)] italic text-muted text-[13px] leading-4">
               {card.somethingElseText}
             </div>
           </div>
@@ -3642,7 +3666,7 @@ function ClarifyOptions({ card }: { card: ClarifyCard }) {
 
 function SummaryChip({ choices }: { choices: string[] }) {
   return (
-    <div className="flex items-center self-start rounded-lg py-1.5 px-2.5 gap-2 bg-[#F1F2F4] border border-[#E5E7EB]">
+    <div className="flex items-center self-start rounded-full py-1.5 px-3 gap-2 bg-soft/70">
       <svg
         width="11"
         height="11"
@@ -3655,7 +3679,7 @@ function SummaryChip({ choices }: { choices: string[] }) {
       >
         <polyline points="5,12 10,17 19,7" />
       </svg>
-      <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+      <div className="font-[var(--font-inter)] text-muted text-[11.5px] leading-[14px]">
         {choices.join(" · ")}
       </div>
     </div>
@@ -3663,10 +3687,10 @@ function SummaryChip({ choices }: { choices: string[] }) {
 }
 
 function StepRow({ step }: { step: Step }) {
-  const borderClass = step.highlight ? "border-[#5CBFFF]" : "border-[#E5E7EB]";
+  const ringClass = step.highlight ? "ring-1 ring-info/60" : "";
   return (
-    <div className={`flex flex-col rounded-md overflow-clip bg-white border ${borderClass}`}>
-      <div className="flex items-center justify-between py-2 px-3 gap-2 border-b border-[#E5E7EB]">
+    <div className={`flex flex-col rounded-[12px] overflow-clip bg-paper shadow-card ${ringClass}`}>
+      <div className="flex items-center justify-between py-2 px-3 gap-2 border-b border-hairline">
         <div className="flex items-center gap-2 min-w-0">
           <AnimatePresence initial={false}>
             {step.done ? (
@@ -3690,13 +3714,13 @@ function StepRow({ step }: { step: Step }) {
             <motion.div
               key={step.title}
               {...fadeIn}
-              className="font-[var(--font-inter)] text-[#1A1B1F] text-[12px] leading-tight truncate"
+              className="font-[var(--font-inter)] text-ink text-[12.5px] leading-tight truncate font-medium"
             >
               {step.title}
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 tracking-[0.04em] shrink-0">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-3 tracking-[0.02em] shrink-0">
           {step.step}
         </div>
       </div>
@@ -3719,29 +3743,17 @@ function StepRow({ step }: { step: Step }) {
 }
 
 function FileBadge({ file }: { file: StepFile }) {
-  if (file.badgeStyle === "csv") {
-    return (
-      <div className="rounded-[3px] py-0.5 px-1 bg-[#E6FFF5]">
-        <div className="font-[var(--font-inconsolata)] font-bold text-[#19A875] text-[9px] leading-3">
-          {file.badge}
-        </div>
-      </div>
-    );
-  }
-  if (file.badgeStyle === "pdf") {
-    return (
-      <div className="rounded-[2px] py-px px-[3px] bg-[#FFE0EC]">
-        <div className="font-[var(--font-inconsolata)] font-bold text-[#FF4488] text-[8px] leading-[10px]">
-          {file.badge}
-        </div>
-      </div>
-    );
-  }
+  const styles =
+    file.badgeStyle === "csv"
+      ? "bg-green-soft text-green"
+      : file.badgeStyle === "pdf"
+        ? "bg-pink text-pink-ink"
+        : "bg-soft text-faint";
   return (
-    <div className="rounded-[3px] py-px px-1 bg-white border border-[#E5E7EB]">
-      <div className="font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[9px] leading-3">
-        {file.badge}
-      </div>
+    <div
+      className={`rounded-[4px] py-0.5 px-[5px] font-[var(--font-inconsolata)] font-bold text-[9.5px] leading-3 tracking-[0.02em] uppercase ${styles}`}
+    >
+      {file.badge}
     </div>
   );
 }
@@ -3749,28 +3761,36 @@ function FileBadge({ file }: { file: StepFile }) {
 function FileRow({ file, expanded }: { file: StepFile; expanded: boolean }) {
   return (
     <div
-      className={`flex items-center justify-between py-[7px] px-2.5 transition-colors duration-200 ${
-        expanded ? "bg-[#FAFBFC] border-b border-[#E5E7EB]" : ""
+      className={`flex items-center justify-between py-2 px-3 transition-colors duration-200 ${
+        expanded ? "bg-stripe/60 border-b border-hairline" : ""
       }`}
     >
-      <div className="flex items-center gap-[7px] min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <FileBadge file={file} />
-        <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px] truncate">
+        <div className="font-[var(--font-inconsolata)] text-ink text-[11px] leading-[14px] truncate">
           {file.fileName}
         </div>
         {file.section ? (
-          <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 shrink-0">
+          <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-3 shrink-0">
             {file.section}
           </div>
         ) : null}
       </div>
-      <div
-        className={`font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px] shrink-0 transition-transform duration-200 ${
-          expanded ? "rotate-0" : "rotate-180"
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`shrink-0 transition-transform duration-200 ${
+          expanded ? "rotate-180 text-muted" : "rotate-0 text-faint"
         }`}
       >
-        ▾
-      </div>
+        <polyline points="6,9 12,15 18,9" />
+      </svg>
     </div>
   );
 }
@@ -3784,21 +3804,21 @@ function StepBodyCsv({
   return (
     <div className="flex flex-col">
       <div className="flex items-center py-1.5 px-2.5 gap-1.5">
-        <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3 tracking-[0.04em]">
+        <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3 tracking-[0.04em]">
           {body.rangeText}
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3">·</div>
-        <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3 tracking-[0.04em]">
+        <div className="font-[var(--font-inconsolata)] text-[#9C9EA3] text-[10px] leading-3">·</div>
+        <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3 tracking-[0.04em]">
           {body.filter}
         </div>
       </div>
       <div className="flex flex-col">
-        <div className="flex py-[5px] px-2.5">
+        <div className="flex py-1.5 px-3">
           {body.columns.map((c, i) => (
             <div
               key={c}
               style={{ flex: `${weights[i]} 1 0%` }}
-              className={`tracking-[0.04em] font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[9px] leading-3 ${
+              className={`tracking-[0.04em] uppercase font-[var(--font-inconsolata)] font-bold text-faint text-[9.5px] leading-3 ${
                 i === 0 || i === 1 ? "" : "text-right"
               }`}
             >
@@ -3809,21 +3829,21 @@ function StepBodyCsv({
         {body.rows.map((row, ri) => (
           <div
             key={ri}
-            className={`flex py-[5px] px-2.5 ${
-              row.highlight ? "bg-[#FFE0EC]" : ri % 2 === 1 ? "bg-[#FAFBFC]" : ""
+            className={`flex py-1.5 px-3 ${
+              row.highlight ? "bg-pink/40" : ri % 2 === 1 ? "bg-stripe/60" : ""
             }`}
           >
             {row.values.map((v, vi) => {
               const isOutcome = vi === row.values.length - 1;
               const align = vi === 0 || vi === 1 ? "" : "text-right";
-              const accent = row.outcomeAccent && isOutcome ? "font-bold text-[#FF4488]" : "text-[#1A1B1F]";
+              const accent = row.outcomeAccent && isOutcome ? "font-bold text-pink-ink" : "text-ink";
               const muted = row.outcomeAccent && isOutcome ? false : isOutcome;
               return (
                 <div
                   key={vi}
                   style={{ flex: `${weights[vi]} 1 0%` }}
-                  className={`font-[var(--font-inconsolata)] text-[10px] leading-3 ${align} ${accent} ${
-                    muted ? "text-[#5A5E66]" : ""
+                  className={`font-[var(--font-inconsolata)] text-[10.5px] leading-[13px] ${align} ${accent} ${
+                    muted ? "text-muted" : ""
                   }`}
                 >
                   {v}
@@ -3833,11 +3853,11 @@ function StepBodyCsv({
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between py-1.5 px-2.5">
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 tracking-[0.04em]">
+      <div className="flex items-center justify-between py-2 px-3 border-t border-hairline">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-3 tracking-[0.02em]">
           {body.moreRowsText}
         </div>
-        <div className="font-[var(--font-inter)] font-medium text-[#FF4E49] text-[10px] leading-3">
+        <div className="font-[var(--font-inter)] font-medium text-coral text-[10.5px] leading-3 tracking-[-0.005em]">
           Open in editor ↗
         </div>
       </div>
@@ -3852,39 +3872,39 @@ function StepBodyNarrative({
 }) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center py-1.5 px-3 gap-1.5">
-        <div className="tracking-[0.04em] font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3">
+      <div className="flex items-center py-2 px-3 gap-1.5">
+        <div className="tracking-[0.04em] uppercase font-[var(--font-inconsolata)] text-faint text-[9.5px] leading-3">
           {body.sectionLabel}
         </div>
-        <div className="font-sans text-[#8E939A] text-[10px] leading-3">·</div>
-        <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+        <div className="text-faint text-[10px] leading-3">·</div>
+        <div className="font-[var(--font-inter)] text-muted text-[11px] leading-[14px]">
           {body.sectionTitle}
         </div>
       </div>
-      <div className="py-2 px-3">
-        <div className="font-[var(--font-inter)] text-[#1A1B1F] text-[11px] leading-4">
+      <div className="px-3 pb-2.5">
+        <div className="font-[var(--font-inter)] text-ink text-[12px] leading-[155%]">
           {body.body}
         </div>
       </div>
       {body.definitions ? (
-        <div className="flex flex-col pt-1.5 pb-2 gap-1 px-3">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 pt-1.5 pb-2.5 px-3 border-t border-hairline">
           {body.definitions.map((d) => (
-            <div key={d.term} className="flex items-baseline gap-2">
-              <div className="min-w-14 inline-block font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 tracking-[0.04em]">
+            <Fragment key={d.term}>
+              <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.04em] uppercase whitespace-nowrap">
                 {d.term}
               </div>
-              <div className="inline-block font-[var(--font-inter)] text-[#1A1B1F] text-[10px] leading-[14px]">
+              <div className="font-[var(--font-inter)] text-ink text-[11.5px] leading-[155%]">
                 {d.def}
               </div>
-            </div>
+            </Fragment>
           ))}
         </div>
       ) : null}
-      <div className="flex items-center justify-between py-1.5 px-3">
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-3 tracking-[0.04em]">
+      <div className="flex items-center justify-between py-2 px-3 border-t border-hairline">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-3 tracking-[0.02em]">
           {body.footerText}
         </div>
-        <div className="font-[var(--font-inter)] font-medium text-[#FF4E49] text-[10px] leading-3">
+        <div className="font-[var(--font-inter)] font-medium text-coral text-[10.5px] leading-3 tracking-[-0.005em]">
           Open in editor ↗
         </div>
       </div>
@@ -3895,12 +3915,12 @@ function StepBodyNarrative({
 function MessageBubble({ message }: { message: Message }) {
   if (message.role === "user") {
     return (
-      <div className="flex flex-col items-end gap-1.5">
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-[14px] tracking-[0.04em]">
+      <div className="flex flex-col items-end gap-1">
+        <div className="font-[var(--font-inter)] text-faint text-[10.5px] leading-[14px]">
           you · {message.time}
         </div>
-        <div className="max-w-[260px] rounded-[10px] py-2 px-3 bg-[#F1F2F4]">
-          <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#1A1B1F]">
+        <div className="max-w-[280px] rounded-[14px] py-2 px-3.5 bg-soft/70">
+          <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-ink">
             {message.text}
           </div>
         </div>
@@ -3916,10 +3936,10 @@ function MessageBubble({ message }: { message: Message }) {
     : `text:${message.text ?? ""}-${message.state ?? "final"}`;
 
   return (
-    <div className="flex flex-col gap-1.5 relative">
+    <div className="flex flex-col gap-1 relative">
       <div className="flex items-center gap-1.5">
-        <div className="rounded-full shrink-0 bg-[#FF4E49] size-1.5" />
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[10px] leading-[14px] tracking-[0.04em]">
+        <div className="rounded-full shrink-0 bg-coral size-1.5" />
+        <div className="font-[var(--font-inter)] text-faint text-[10.5px] leading-[14px]">
           peer · {message.time}
         </div>
       </div>
@@ -3933,7 +3953,7 @@ function MessageBubble({ message }: { message: Message }) {
             key={bodyKey}
             {...fadeIn}
             className={`text-[13px] leading-[155%] font-[var(--font-inter)] ${
-              isThinking ? "italic text-[#5A5E66]" : "text-[#1A1B1F]"
+              isThinking ? "italic text-muted" : "text-ink"
             }`}
           >
             {message.text}
@@ -3958,20 +3978,20 @@ function Row({
   muted?: boolean;
 }) {
   return (
-    <div className={`flex items-center py-2.5 px-[18px] ${zebra ? "bg-[#F1F2F4]" : ""}`}>
-      <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] text-[#1A1B1F] text-sm leading-[18px]">
+    <div className={`flex items-center py-2.5 px-5 ${zebra ? "bg-stripe/60" : ""}`}>
+      <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] text-ink text-[13.5px] leading-[18px]">
         {label}
       </div>
       <div
-        className={`basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] text-sm leading-[18px] ${
-          muted ? "text-[#8E939A]" : "text-[#1A1B1F]"
+        className={`basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] text-[13.5px] leading-[18px] tabular-nums ${
+          muted ? "text-faint" : "text-ink"
         }`}
       >
         {a}
       </div>
       <div
         className={`basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] text-sm leading-[18px] ${
-          muted ? "text-[#8E939A]" : "text-[#1A1B1F]"
+          muted ? "text-[#9C9EA3]" : "text-[#14161A]"
         }`}
       >
         {b}
@@ -4006,7 +4026,7 @@ function TraceabilityFrame() {
   return (
     <div className="[font-synthesis:none] flex overflow-hidden w-full h-full flex-col bg-white antialiased text-xs/4 relative">
       {/* Top nav */}
-      <div className="flex items-center h-14 w-full shrink-0 px-6 gap-4 bg-white border-b border-[#E5E7EB]">
+      <div className="flex items-center h-14 w-full shrink-0 px-6 gap-4 bg-white border-b border-[#EBE9E1]">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center shrink-0 size-6">
             <svg
@@ -4030,25 +4050,25 @@ function TraceabilityFrame() {
         </div>
 
         <div className="flex items-center ml-6 gap-2 font-[var(--font-inconsolata)] text-[13px] leading-4">
-          <span className="text-[#1A1B1F]">Aurora-IV</span>
-          <span className="text-[#8E939A]">/</span>
-          <span className="text-[#1A1B1F]">Phase III CSR</span>
-          <span className="text-[#8E939A]">/</span>
-          <span className="text-[#1A1B1F]">Module 5.3.5</span>
-          <span className="text-[#8E939A]">/</span>
-          <span className="text-[#1A1B1F]">CSR-014.md</span>
+          <span className="text-[#14161A]">Aurora-IV</span>
+          <span className="text-[#9C9EA3]">/</span>
+          <span className="text-[#14161A]">Phase III CSR</span>
+          <span className="text-[#9C9EA3]">/</span>
+          <span className="text-[#14161A]">Module 5.3.5</span>
+          <span className="text-[#9C9EA3]">/</span>
+          <span className="text-[#14161A]">CSR-014.md</span>
         </div>
 
         <div className="grow" />
 
         <div className="flex items-center gap-1.5">
           <div className="rounded-full shrink-0 bg-[#19A875] size-1.5" />
-          <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[13px] leading-4">
+          <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[13px] leading-4">
             auto-saved · 14:02
           </div>
         </div>
-        <div className="flex items-center justify-center rounded-full shrink-0 size-7 bg-white border border-[#E5E7EB]">
-          <div className="font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-[11px] leading-[14px]">
+        <div className="flex items-center justify-center rounded-full shrink-0 size-7 bg-white border border-[#EBE9E1]">
+          <div className="font-[var(--font-inconsolata)] font-bold text-[#14161A] text-[11px] leading-[14px]">
             AN
           </div>
         </div>
@@ -4057,12 +4077,12 @@ function TraceabilityFrame() {
       {/* Body */}
       <div className="flex grow w-full min-h-0">
         {/* Workspace sidebar */}
-        <div className="flex flex-col w-[220px] shrink-0 min-h-0 bg-white border-r border-[#E5E7EB]">
+        <div className="flex flex-col w-[220px] shrink-0 min-h-0 bg-white border-r border-[#EBE9E1]">
           <div className="flex items-center justify-between pt-5 pb-3 px-4">
-            <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[11px] leading-[14px]">
+            <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#9C9EA3] text-[11px] leading-[14px]">
               WORKSPACE
             </div>
-            <div className="w-[18px] h-[18px] flex items-center justify-center shrink-0 font-[var(--font-inconsolata)] text-[#8E939A] text-sm leading-[18px]">
+            <div className="w-[18px] h-[18px] flex items-center justify-center shrink-0 font-[var(--font-inconsolata)] text-[#9C9EA3] text-sm leading-[18px]">
               +
             </div>
           </div>
@@ -4087,14 +4107,14 @@ function TraceabilityFrame() {
         {/* Editor column */}
         <div className="flex flex-col grow min-w-0 min-h-0 bg-white">
           {/* Tab bar — file-tree icon on left, side-by-side button on right */}
-          <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#E5E7EB]">
-            <div className="flex items-center justify-center self-center rounded-md shrink-0 bg-white ring-1 ring-[#E5E7EB] size-8">
+          <div className="flex items-end h-12 shrink-0 px-4 gap-1.5 border-b border-[#EBE9E1]">
+            <div className="flex items-center justify-center self-center rounded-md shrink-0 bg-white ring-1 ring-[#EBE9E1] size-8">
               <svg
                 width="16"
                 height="16"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#1A1B1F"
+                stroke="#14161A"
                 strokeWidth="1.5"
                 xmlns="http://www.w3.org/2000/svg"
                 className="shrink-0"
@@ -4107,27 +4127,27 @@ function TraceabilityFrame() {
                 <line x1="15" y1="6" x2="15" y2="21" />
               </svg>
             </div>
-            <div className="flex items-center h-9 -mb-px px-3 gap-2 bg-white border-t border-l border-r border-t-[#FF4E49] border-l-[#E5E7EB] border-r-[#E5E7EB] rounded-t-lg">
-              <div className="rounded-[3px] py-0.5 px-1 bg-[#F6F6F6]">
-                <div className="font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[9px] leading-3">
+            <div className="flex items-center h-9 -mb-px px-3 gap-2 bg-white border-t border-l border-r border-t-[#FF4E49] border-l-[#EBE9E1] border-r-[#EBE9E1] rounded-t-lg">
+              <div className="rounded-[3px] py-0.5 px-1 bg-[#F3F1ED]">
+                <div className="font-[var(--font-inconsolata)] font-bold text-[#62656B] text-[9px] leading-3">
                   md
                 </div>
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+              <div className="font-[var(--font-inconsolata)] text-[#14161A] text-[13px] leading-4">
                 CSR-014.md
               </div>
-              <div className="ml-1 font-[var(--font-inconsolata)] text-[#8E939A] text-sm leading-[18px]">
+              <div className="ml-1 font-[var(--font-inconsolata)] text-[#9C9EA3] text-sm leading-[18px]">
                 ×
               </div>
             </div>
             <div className="grow" />
-            <div className="flex items-center self-center rounded-md py-1.5 px-2.5 gap-1.5 bg-white border border-[#E5E7EB]">
+            <div className="flex items-center self-center rounded-md py-1.5 px-2.5 gap-1.5 bg-white border border-[#EBE9E1]">
               <svg
                 width="14"
                 height="14"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#1A1B1F"
+                stroke="#14161A"
                 strokeWidth="1.5"
                 xmlns="http://www.w3.org/2000/svg"
                 className="shrink-0"
@@ -4135,7 +4155,7 @@ function TraceabilityFrame() {
                 <rect x="3" y="4" width="18" height="16" rx="1.5" />
                 <line x1="12" y1="4" x2="12" y2="20" />
               </svg>
-              <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-xs leading-4">
+              <div className="font-[var(--font-inconsolata)] text-[#14161A] text-xs leading-4">
                 side-by-side
               </div>
             </div>
@@ -4144,20 +4164,20 @@ function TraceabilityFrame() {
           {/* Doc body */}
           <div className="flex flex-col grow pt-8 overflow-auto px-20 min-h-0 relative">
             <div className="flex items-center mb-3 gap-2.5 font-[var(--font-inconsolata)] text-[11px] leading-[14px]">
-              <span className="tracking-[0.06em] font-bold text-[#1A1B1F]">SECTION 12.4</span>
-              <span className="tracking-[0.04em] text-[#8E939A]">—</span>
-              <span className="tracking-[0.04em] text-[#5A5E66]">Phase III</span>
-              <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-              <span className="tracking-[0.04em] text-[#5A5E66]">Aurora-IV</span>
-              <span className="tracking-[0.04em] text-[#8E939A]">·</span>
-              <span className="tracking-[0.04em] text-[#5A5E66]">Hepatic Adverse Events</span>
+              <span className="tracking-[0.06em] font-bold text-[#14161A]">SECTION 12.4</span>
+              <span className="tracking-[0.04em] text-[#9C9EA3]">—</span>
+              <span className="tracking-[0.04em] text-[#62656B]">Phase III</span>
+              <span className="tracking-[0.04em] text-[#9C9EA3]">·</span>
+              <span className="tracking-[0.04em] text-[#62656B]">Aurora-IV</span>
+              <span className="tracking-[0.04em] text-[#9C9EA3]">·</span>
+              <span className="tracking-[0.04em] text-[#62656B]">Hepatic Adverse Events</span>
             </div>
 
-            <h1 className="text-[36px] leading-[115%] tracking-[-0.005em] mb-[18px] font-[var(--font-inter)] text-[#1A1B1F]">
+            <h1 className="text-[36px] leading-[115%] tracking-[-0.005em] mb-[18px] font-[var(--font-inter)] text-[#14161A]">
               Hepatic adverse events
             </h1>
 
-            <p className="text-[15px] leading-[165%] mb-6 font-[var(--font-inter)] text-[#1A1B1F]">
+            <p className="text-[15px] leading-[165%] mb-6 font-[var(--font-inter)] text-[#14161A]">
               Aurora-IV is administered orally once daily and is metabolized primarily through
               hepatic CYP3A4 pathways. The Phase III safety database includes 891 randomized
               participants across 47 sites, with hepatic monitoring performed every two weeks
@@ -4165,19 +4185,19 @@ function TraceabilityFrame() {
               risk-management plan.
             </p>
 
-            <div className="flex flex-col mb-[18px] rounded-[10px] overflow-clip bg-white border border-[#E5E7EB]">
-              <div className="flex items-center justify-between py-3.5 px-[18px] bg-[#F1F2F4] border-b border-[#E5E7EB]">
+            <div className="flex flex-col mb-[18px] rounded-[10px] overflow-clip bg-white border border-[#EBE9E1]">
+              <div className="flex items-center justify-between py-3.5 px-[18px] bg-[#F3F1ED] border-b border-[#EBE9E1]">
                 <div className="flex items-baseline gap-2.5">
-                  <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[11px] leading-[14px]">
+                  <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#62656B] text-[11px] leading-[14px]">
                     TABLE 12.4-1
                   </div>
-                  <div className="font-[var(--font-inter)] italic text-[#1A1B1F] text-sm leading-[18px]">
+                  <div className="font-[var(--font-inter)] italic text-[#14161A] text-sm leading-[18px]">
                     Hepatic adverse events by grade and treatment arm
                   </div>
                 </div>
               </div>
 
-              <div className="flex py-2.5 px-[18px] bg-white border-b border-[#E5E7EB] font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[11px] leading-[14px] tracking-[0.06em]">
+              <div className="flex py-2.5 px-[18px] bg-white border-b border-[#EBE9E1] font-[var(--font-inconsolata)] font-bold text-[#9C9EA3] text-[11px] leading-[14px] tracking-[0.06em]">
                 <div className="basis-0 grow-[2] shrink">GRADE</div>
                 <div className="basis-0 grow-[1.4] shrink text-right">AURORA-IV (n=598)</div>
                 <div className="basis-0 grow-[1.4] shrink text-right">PLACEBO (n=293)</div>
@@ -4188,27 +4208,27 @@ function TraceabilityFrame() {
               <Row label="Grade 3 — ALT > 5× ULN" a="2  (0.3%)" b="1  (0.3%)" />
               <Row label="Grade 4" a="0  (0.0%)" b="0  (0.0%)" zebra muted />
 
-              <div className="flex items-center py-3 px-[18px] bg-white border-t border-[#1A1B1F]">
-                <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] font-semibold text-[#1A1B1F] text-sm leading-[18px]">
+              <div className="flex items-center py-3 px-[18px] bg-white border-t border-[#14161A]">
+                <div className="basis-0 grow-[2] shrink font-[var(--font-inter)] font-semibold text-[#14161A] text-sm leading-[18px]">
                   Total — any grade
                 </div>
-                <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-sm leading-[18px]">
+                <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#14161A] text-sm leading-[18px]">
                   49  (8.2%)
                 </div>
-                <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-sm leading-[18px]">
+                <div className="basis-0 grow-[1.4] shrink text-right font-[var(--font-inconsolata)] font-bold text-[#14161A] text-sm leading-[18px]">
                   12  (4.1%)
                 </div>
               </div>
             </div>
 
             {/* Comparative narrative — claims underlined for source provenance */}
-            <p className="flex flex-wrap items-baseline mt-[18px] text-[15px] leading-[165%] font-[var(--font-inter)] text-[#1A1B1F] gap-x-[5px]">
+            <p className="flex flex-wrap items-baseline mt-[18px] text-[15px] leading-[165%] font-[var(--font-inter)] text-[#14161A] gap-x-[5px]">
               <span>The hepatic AE rate in</span>
               <span className="underline-offset-[3px] [text-decoration:underline_1.5px_#19A875]">
                 Aurora-IV (8.2%; n=49/598)
               </span>
               <span>tracks the</span>
-              <span className="underline-offset-[3px] [text-decoration:underline_1.5px_#8E939A]">
+              <span className="underline-offset-[3px] [text-decoration:underline_1.5px_#9C9EA3]">
                 Phase 2 finding (7.6%; n=18/237)
               </span>
               <span>
@@ -4222,30 +4242,30 @@ function TraceabilityFrame() {
         </div>
 
         {/* Copilot rail */}
-        <div className="flex flex-col w-[340px] shrink-0 min-h-0 bg-white border-l border-[#E5E7EB]">
-          <div className="flex flex-col shrink-0 pt-3.5 border-b border-[#E5E7EB] px-4">
+        <div className="flex flex-col w-[340px] shrink-0 min-h-0 bg-white border-l border-[#EBE9E1]">
+          <div className="flex flex-col shrink-0 pt-3.5 border-b border-[#EBE9E1] px-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-[18px] h-[18px] flex items-center justify-center rounded-full shrink-0 bg-[#FFF5F4]">
+                <div className="w-[18px] h-[18px] flex items-center justify-center rounded-full shrink-0 bg-[#FFEEEC]">
                   <div className="rounded-full shrink-0 bg-[#FF4E49] size-2" />
                 </div>
-                <div className="tracking-[-0.005em] font-[var(--font-inter)] font-medium text-[#1A1B1F] text-xl leading-6">
+                <div className="tracking-[-0.005em] font-[var(--font-inter)] font-medium text-[#14161A] text-xl leading-6">
                   Copilot
                 </div>
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 peer-csr-v3
               </div>
             </div>
             {/* Toolbar */}
             <div className="flex items-center mb-3.5 gap-1.5">
-              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#E5E7EB]">
+              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#EBE9E1]">
                 <svg
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#1A1B1F"
+                  stroke="#14161A"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -4255,13 +4275,13 @@ function TraceabilityFrame() {
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
-              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#E5E7EB]">
+              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#EBE9E1]">
                 <svg
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#1A1B1F"
+                  stroke="#14161A"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -4273,7 +4293,7 @@ function TraceabilityFrame() {
                   <path d="M12 9v6" />
                 </svg>
               </div>
-              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#E5E7EB]">
+              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-white border border-[#EBE9E1]">
                 <svg
                   width="14"
                   height="14"
@@ -4289,13 +4309,13 @@ function TraceabilityFrame() {
                   <circle cx="15" cy="12" r="4" />
                 </svg>
               </div>
-              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-[#FFE9F0] border border-[#FFC4D7]">
+              <div className="w-[30px] h-[30px] flex items-center justify-center rounded-md shrink-0 bg-[#FFD9E5] border border-[#FFD9E5]">
                 <svg
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#FF4488"
+                  stroke="#C13075"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -4313,22 +4333,22 @@ function TraceabilityFrame() {
 
           <div className="flex flex-col grow pt-[18px] overflow-auto gap-3.5 px-4 min-h-0">
             {/* Context pill */}
-            <div className="flex items-center self-start rounded-lg py-1.5 px-2.5 gap-2 bg-[#F1F2F4] border border-[#E5E7EB]">
-              <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[9px] leading-3">
+            <div className="flex items-center self-start rounded-lg py-1.5 px-2.5 gap-2 bg-[#F3F1ED] border border-[#EBE9E1]">
+              <div className="tracking-[0.06em] font-[var(--font-inconsolata)] font-bold text-[#9C9EA3] text-[9px] leading-3">
                 CONTEXT
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#14161A] text-[11px] leading-[14px]">
                 CSR-014.md · §12.4
               </div>
             </div>
 
             {/* User message */}
             <div className="flex flex-col items-end gap-1">
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 you · 14:03
               </div>
-              <div className="max-w-[260px] rounded-[10px] py-2 px-3 bg-[#F1F2F4]">
-                <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#1A1B1F]">
+              <div className="max-w-[260px] rounded-[10px] py-2 px-3 bg-[#F3F1ED]">
+                <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#14161A]">
                   Draft the §12.4 hepatic AE narrative.
                 </div>
               </div>
@@ -4338,17 +4358,17 @@ function TraceabilityFrame() {
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
                 <div className="rounded-full shrink-0 bg-[#FF4E49] size-1.5" />
-                <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+                <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                   peer · 14:03
                 </div>
               </div>
-              <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#1A1B1F]">
+              <div className="text-[13px] leading-[155%] font-[var(--font-inter)] text-[#14161A]">
                 Opened traceability map.
               </div>
             </div>
 
             {/* Accepted-state pills */}
-            <div className="flex items-center self-start rounded-lg py-1.5 px-2.5 gap-2 bg-[#F1F2F4] border border-[#E5E7EB]">
+            <div className="flex items-center self-start rounded-lg py-1.5 px-2.5 gap-2 bg-[#F3F1ED] border border-[#EBE9E1]">
               <svg
                 width="11"
                 height="11"
@@ -4361,14 +4381,14 @@ function TraceabilityFrame() {
               >
                 <polyline points="5,12 10,17 19,7" />
               </svg>
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 Magnitude · Subgroup table · Phase 2 inline
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#9C9EA3] text-[11px] leading-[14px]">
                 ▾
               </div>
             </div>
-            <div className="flex items-center self-start rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#E5E7EB]">
+            <div className="flex items-center self-start rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#EBE9E1]">
               <svg
                 width="11"
                 height="11"
@@ -4381,14 +4401,14 @@ function TraceabilityFrame() {
               >
                 <polyline points="5,12 10,17 19,7" />
               </svg>
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 Reasoned · 6 steps · 12s
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#9C9EA3] text-[11px] leading-[14px]">
                 ▾
               </div>
             </div>
-            <div className="flex items-center self-start rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#E5E7EB]">
+            <div className="flex items-center self-start rounded-full py-1.5 px-2.5 gap-2 bg-white border border-[#EBE9E1]">
               <svg
                 width="11"
                 height="11"
@@ -4401,7 +4421,7 @@ function TraceabilityFrame() {
               >
                 <polyline points="5,12 10,17 19,7" />
               </svg>
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 Accepted · v3 comparative
               </div>
               <svg
@@ -4421,9 +4441,9 @@ function TraceabilityFrame() {
           </div>
 
           {/* Composer */}
-          <div className="flex flex-col shrink-0 pt-3 pb-4 gap-1.5 bg-white border-t border-[#E5E7EB] px-4">
-            <div className="flex items-center rounded-[10px] py-2.5 px-3 gap-2 bg-white ring-1 ring-[#E5E7EB]">
-              <div className="grow font-[var(--font-inter)] text-[#5A5E66] text-[13px] leading-4">
+          <div className="flex flex-col shrink-0 pt-3 pb-4 gap-1.5 bg-white border-t border-[#EBE9E1] px-4">
+            <div className="flex items-center rounded-[10px] py-2.5 px-3 gap-2 bg-white ring-1 ring-[#EBE9E1]">
+              <div className="grow font-[var(--font-inter)] text-[#62656B] text-[13px] leading-4">
                 Type here…
               </div>
               <div className="flex items-center justify-center rounded-md shrink-0 bg-[#FF4E49] size-6">
@@ -4457,21 +4477,21 @@ function TraceabilityFrame() {
 
       {/* Traceability modal */}
       <motion.div
-        className="absolute left-1/2 top-[90px] -translate-x-1/2 w-[1090px] max-w-[calc(100%-100px)] flex flex-col rounded-[14px] overflow-clip shadow-[0_24px_60px_#0000002E,0_0_0_1px_#0000000A] bg-white border border-[#E5E7EB]"
+        className="absolute left-1/2 top-[90px] -translate-x-1/2 w-[1090px] max-w-[calc(100%-100px)] flex flex-col rounded-[14px] overflow-clip shadow-[0_24px_60px_#0000002E,0_0_0_1px_#0000000A] bg-white border border-[#EBE9E1]"
         initial={{ opacity: 0, scale: 0.97, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={{ duration: 0.28, ease: "easeOut" }}
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between py-3.5 px-5 border-b border-[#E5E7EB]">
+        <div className="flex items-center justify-between py-3.5 px-5 border-b border-[#EBE9E1]">
           <div className="flex items-center gap-2.5">
             <svg
               width="16"
               height="16"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#1A1B1F"
+              stroke="#14161A"
               strokeWidth="1.5"
               xmlns="http://www.w3.org/2000/svg"
               className="shrink-0"
@@ -4483,49 +4503,49 @@ function TraceabilityFrame() {
               <line x1="9" y1="3" x2="9" y2="18" />
               <line x1="15" y1="6" x2="15" y2="21" />
             </svg>
-            <div className="tracking-[-0.005em] font-[var(--font-inter)] font-semibold text-[#1A1B1F] text-base leading-5">
+            <div className="tracking-[-0.005em] font-[var(--font-inter)] font-semibold text-[#14161A] text-base leading-5">
               Aurora-IV — Phase III CSR · Traceability
             </div>
           </div>
           <div className="flex items-center gap-3.5">
-            <div className="flex items-center rounded-md py-1 px-[9px] gap-1.5 bg-[#F1F2F4] border border-[#E5E7EB]">
+            <div className="flex items-center rounded-md py-1 px-[9px] gap-1.5 bg-[#F3F1ED] border border-[#EBE9E1]">
               <div className="rounded-full shrink-0 bg-[#19A875] size-1.5" />
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                 11 nodes · 14 edges · synced
               </div>
             </div>
-            <div className="flex items-center rounded-md bg-white border border-[#E5E7EB]">
+            <div className="flex items-center rounded-md bg-white border border-[#EBE9E1]">
               <div className="py-1 px-2.5">
-                <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+                <div className="font-[var(--font-inconsolata)] text-[#14161A] text-[13px] leading-4">
                   −
                 </div>
               </div>
-              <div className="w-px h-3.5 shrink-0 bg-[#E5E7EB]" />
+              <div className="w-px h-3.5 shrink-0 bg-[#EBE9E1]" />
               <div className="py-1 px-2.5">
-                <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px]">
+                <div className="font-[var(--font-inconsolata)] text-[#14161A] text-[11px] leading-[14px]">
                   100%
                 </div>
               </div>
-              <div className="w-px h-3.5 shrink-0 bg-[#E5E7EB]" />
+              <div className="w-px h-3.5 shrink-0 bg-[#EBE9E1]" />
               <div className="py-1 px-2.5">
-                <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[13px] leading-4">
+                <div className="font-[var(--font-inconsolata)] text-[#14161A] text-[13px] leading-4">
                   +
                 </div>
               </div>
-              <div className="w-px h-3.5 shrink-0 bg-[#E5E7EB]" />
+              <div className="w-px h-3.5 shrink-0 bg-[#EBE9E1]" />
               <div className="py-1 px-2.5">
-                <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[11px] leading-[14px]">
+                <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[11px] leading-[14px]">
                   ⤢ fit
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-center rounded-md shrink-0 border border-[#E5E7EB] size-7">
+            <div className="flex items-center justify-center rounded-md shrink-0 border border-[#EBE9E1] size-7">
               <svg
                 width="12"
                 height="12"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#5A5E66"
+                stroke="#62656B"
                 strokeWidth="2"
                 xmlns="http://www.w3.org/2000/svg"
                 className="shrink-0"
@@ -4538,7 +4558,7 @@ function TraceabilityFrame() {
         </div>
 
         {/* Graph canvas */}
-        <div className="w-full h-[560px] overflow-clip relative shrink-0 bg-[#F1F2F4]">
+        <div className="w-full h-[560px] overflow-clip relative shrink-0 bg-[#F3F1ED]">
           <svg
             width="1090"
             height="560"
@@ -4555,7 +4575,7 @@ function TraceabilityFrame() {
                 refY="3"
                 orient="auto"
               >
-                <path d="M 0 0 L 6 3 L 0 6 z" fill="#E5E7EB" />
+                <path d="M 0 0 L 6 3 L 0 6 z" fill="#EBE9E1" />
               </marker>
               <marker
                 id="trace-arrow-strong"
@@ -4565,12 +4585,12 @@ function TraceabilityFrame() {
                 refY="3"
                 orient="auto"
               >
-                <path d="M 0 0 L 6 3 L 0 6 z" fill="#3935FF" />
+                <path d="M 0 0 L 6 3 L 0 6 z" fill="#4F46E5" />
               </marker>
             </defs>
             <path
               d="M 214 78 L 360 78 L 360 200 L 470 200"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4578,7 +4598,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 214 166 L 380 166 L 380 206 L 470 206"
-              stroke="#FF4E4A"
+              stroke="#FF4E49"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-strong)"
@@ -4586,7 +4606,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 214 254 L 380 254 L 380 214 L 470 214"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4594,7 +4614,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 214 342 L 360 342 L 360 220 L 470 220"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.2"
               strokeDasharray="3 3"
               fill="none"
@@ -4603,7 +4623,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 414 122 L 450 122 L 450 204 L 470 204"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4611,7 +4631,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 414 298 L 450 298 L 450 216 L 470 216"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4619,7 +4639,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 614 210 L 650 210 L 650 122 L 670 122"
-              stroke="#FF4E4A"
+              stroke="#FF4E49"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-strong)"
@@ -4627,7 +4647,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 614 210 L 650 210 L 650 298 L 670 298"
-              stroke="#FF4E4A"
+              stroke="#FF4E49"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-strong)"
@@ -4635,7 +4655,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 814 122 L 850 122 L 850 166 L 870 166"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4643,7 +4663,7 @@ function TraceabilityFrame() {
             />
             <path
               d="M 814 298 L 850 298 L 850 254 L 870 254"
-              stroke="#E4E4E4"
+              stroke="#EBE9E1"
               strokeWidth="1.5"
               fill="none"
               markerEnd="url(#trace-arrow-muted)"
@@ -4652,13 +4672,13 @@ function TraceabilityFrame() {
           </svg>
 
           {/* Edge labels */}
-          <div className="absolute left-[340px] top-[181px] rounded-[3px] py-px px-1.5 bg-white border border-[#E5E7EB]">
-            <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3">
+          <div className="absolute left-[340px] top-[181px] rounded-[3px] py-px px-1.5 bg-white border border-[#EBE9E1]">
+            <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3">
               cites
             </div>
           </div>
-          <div className="absolute left-[638px] top-[151px] rounded-[3px] py-px px-1.5 bg-white border border-[#E5E7EB]">
-            <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3">
+          <div className="absolute left-[638px] top-[151px] rounded-[3px] py-px px-1.5 bg-white border border-[#EBE9E1]">
+            <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3">
               rolls up
             </div>
           </div>
@@ -4716,16 +4736,16 @@ function TraceabilityFrame() {
 
           {/* Current node (highlighted) */}
           <div className="absolute left-[462px] top-[182px] w-40 h-14 flex items-center rounded-lg px-3 gap-2 shadow-[0_0_0_8px_#FF4E4914] bg-white border-[1.5px] border-[#FF4E49]">
-            <div className="rounded-[3px] py-px px-1 bg-[#F6F6F6]">
-              <div className="font-[var(--font-inconsolata)] font-bold text-[#5A5E66] text-[9px] leading-3">
+            <div className="rounded-[3px] py-px px-1 bg-[#F3F1ED]">
+              <div className="font-[var(--font-inconsolata)] font-bold text-[#62656B] text-[9px] leading-3">
                 md
               </div>
             </div>
             <div className="flex flex-col grow min-w-0 gap-px">
-              <div className="font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-[11px] leading-[14px]">
+              <div className="font-[var(--font-inconsolata)] font-bold text-[#14161A] text-[11px] leading-[14px]">
                 CSR-014.md
               </div>
-              <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[9px] leading-3">
+              <div className="font-[var(--font-inconsolata)] text-[#9C9EA3] text-[9px] leading-3">
                 §12.4 hepatic AE
               </div>
             </div>
@@ -4765,44 +4785,44 @@ function TraceabilityFrame() {
           />
 
           {/* Minimap */}
-          <div className="absolute right-[18px] bottom-[18px] w-[140px] h-[80px] rounded-md overflow-clip shadow-[0_2px_6px_#0000000F] bg-white border border-[#E5E7EB]">
-            <div className="left-1.5 top-1.5 w-[128px] h-[68px] rounded-[3px] absolute bg-[#F1F2F4] border border-[#E5E7EB]" />
-            <div className="left-2 top-2 w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-2 top-[18px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-2 top-7 w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-2 top-[38px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-6 top-[13px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-6 top-[33px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-10 top-[23px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#FF4E4A]" />
-            <div className="left-14 top-[13px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-14 top-[33px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-[72px] top-[18px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-[72px] top-7 w-[11px] h-1.5 rounded-[1px] absolute bg-[#E5E7EB]" />
-            <div className="left-1 top-1 w-[130px] h-[72px] rounded-[3px] absolute border-[1.5px] border-[#FF4E4A]" />
+          <div className="absolute right-[18px] bottom-[18px] w-[140px] h-[80px] rounded-md overflow-clip shadow-[0_2px_6px_#0000000F] bg-white border border-[#EBE9E1]">
+            <div className="left-1.5 top-1.5 w-[128px] h-[68px] rounded-[3px] absolute bg-[#F3F1ED] border border-[#EBE9E1]" />
+            <div className="left-2 top-2 w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-2 top-[18px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-2 top-7 w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-2 top-[38px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-6 top-[13px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-6 top-[33px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-10 top-[23px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#FF4E49]" />
+            <div className="left-14 top-[13px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-14 top-[33px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-[72px] top-[18px] w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-[72px] top-7 w-[11px] h-1.5 rounded-[1px] absolute bg-[#EBE9E1]" />
+            <div className="left-1 top-1 w-[130px] h-[72px] rounded-[3px] absolute border-[1.5px] border-[#FF4E49]" />
           </div>
         </div>
 
         {/* Modal footer */}
-        <div className="flex items-center justify-between py-2.5 px-5 bg-white border-t border-[#E5E7EB]">
-          <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[11px] leading-[14px]">
+        <div className="flex items-center justify-between py-2.5 px-5 bg-white border-t border-[#EBE9E1]">
+          <div className="font-[var(--font-inconsolata)] text-[#9C9EA3] text-[11px] leading-[14px]">
             drag to pan · scroll to zoom · click a node to open as tab
           </div>
           <div className="flex items-center gap-3.5">
             <div className="flex items-center gap-[5px]">
-              <div className="rounded-sm shrink-0 bg-white border-[1.5px] border-[#3935FF] size-2.5" />
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3">
+              <div className="rounded-sm shrink-0 bg-white border-[1.5px] border-[#4F46E5] size-2.5" />
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3">
                 current
               </div>
             </div>
             <div className="flex items-center gap-[5px]">
-              <div className="w-3.5 h-[1.5px] shrink-0 bg-[#3935FF]" />
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3">
+              <div className="w-3.5 h-[1.5px] shrink-0 bg-[#4F46E5]" />
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3">
                 strong
               </div>
             </div>
             <div className="flex items-center gap-[5px]">
-              <div className="w-3.5 h-px shrink-0 bg-[#E5E7EB]" />
-              <div className="font-[var(--font-inconsolata)] text-[#5A5E66] text-[10px] leading-3">
+              <div className="w-3.5 h-px shrink-0 bg-[#EBE9E1]" />
+              <div className="font-[var(--font-inconsolata)] text-[#62656B] text-[10px] leading-3">
                 moderate
               </div>
             </div>
@@ -4823,15 +4843,27 @@ function WorkspaceGroup({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col pt-3.5 gap-0.5 px-2 first:pt-0">
-      <div className="flex items-center justify-between p-2">
+    <div className="flex flex-col pt-4 gap-0.5 px-2 first:pt-0">
+      <div className="flex items-center justify-between py-1.5 px-2">
         <div className="flex items-center gap-1.5">
-          <div className="shrink-0 size-0 origin-center [transform:rotate(45deg)] border-y-[3px] border-y-transparent border-l-[4px] border-l-[#1A1B1F]" />
-          <div className="font-[var(--font-inconsolata)] font-bold text-[#1A1B1F] text-[13px] leading-4">
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0 text-faint"
+          >
+            <polyline points="6,9 12,15 18,9" />
+          </svg>
+          <div className="font-[var(--font-inter)] font-medium text-ink text-[12.5px] leading-4">
             {label}
           </div>
         </div>
-        <div className="font-[var(--font-inconsolata)] font-bold text-[#8E939A] text-[11px] leading-[14px]">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[10.5px] leading-[14px] tracking-[0.02em] tabular-nums">
           {count}
         </div>
       </div>
@@ -4853,21 +4885,21 @@ function WorkspaceItem({
 }) {
   return (
     <div
-      className={`flex items-center justify-between py-2 px-2.5 gap-2 rounded-md ${
-        active ? "bg-[#EEF0F4]" : ""
+      className={`flex items-center justify-between py-2 px-2.5 gap-2 rounded-[8px] transition-colors duration-150 ${
+        active ? "bg-soft/70" : ""
       }`}
     >
       <div className="flex items-center gap-2 min-w-0">
         <FileBadge file={{ badge, badgeStyle: badgeStyle ?? "default", fileName: name }} />
         <div
-          className={`font-[var(--font-inconsolata)] text-[13px] leading-4 truncate ${
-            active ? "text-[#1A1B1F]" : "text-[#5A5E66]"
+          className={`font-[var(--font-inconsolata)] text-[12px] leading-4 truncate ${
+            active ? "text-ink" : "text-muted"
           }`}
         >
           {name}
         </div>
       </div>
-      {active ? <div className="rounded-full shrink-0 bg-[#3935FF] size-1.5" /> : null}
+      {active ? <div className="rounded-full shrink-0 bg-accent-indigo size-1.5" /> : null}
     </div>
   );
 }
@@ -4889,15 +4921,15 @@ function GraphNode({
 }) {
   return (
     <div
-      className="absolute w-36 h-14 flex items-center rounded-lg px-3 gap-2 shadow-[0_1px_2px_#0000000A] bg-white border border-[#E5E7EB]"
+      className="absolute w-36 h-14 flex items-center rounded-[12px] px-3 gap-2 bg-paper border border-hairline shadow-card"
       style={{ left, top }}
     >
       <FileBadge file={{ badge, badgeStyle: badgeStyle ?? "default", fileName: name }} />
-      <div className="flex flex-col grow min-w-0 gap-px">
-        <div className="font-[var(--font-inconsolata)] text-[#1A1B1F] text-[11px] leading-[14px] truncate">
+      <div className="flex flex-col grow min-w-0 gap-0.5">
+        <div className="font-[var(--font-inconsolata)] text-ink text-[11px] leading-[14px] truncate">
           {name}
         </div>
-        <div className="font-[var(--font-inconsolata)] text-[#8E939A] text-[9px] leading-3">
+        <div className="font-[var(--font-inconsolata)] text-faint text-[9.5px] leading-3 truncate">
           {sub}
         </div>
       </div>
