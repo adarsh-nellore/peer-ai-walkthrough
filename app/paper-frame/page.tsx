@@ -101,6 +101,7 @@ type Chip = { label: string };
 type AcceptedChip = { label: string; revisit?: boolean };
 
 type WalkthroughFocus =
+  | "chrome"
   | "copilot-clarify"
   | "copilot-reasoning"
   | "copilot-narrative-preview"
@@ -112,7 +113,8 @@ type WalkthroughFocus =
   | "protocol-doc";
 
 type Walkthrough = {
-  title: string;
+  lead: string;
+  active: string;
   focus: WalkthroughFocus;
 };
 
@@ -1415,25 +1417,52 @@ const frames: Frame[] = [
 
 function walkthroughForSlideIndex(index: number): Walkthrough | null {
   const slide = index + 1; // 1-based slide number
+  if (slide >= 1 && slide <= 5) {
+    return {
+      lead: "",
+      active:
+        "User prompts Peer while drafting a CSR; agent will reason and ask before generating.",
+      focus: "chrome",
+    };
+  }
   if (slide >= 6 && slide <= 13) {
     return {
-      title:
-        "A couple of clarifying questions before drafting give the agent a much better shot at one-shotting a narrative the writer actually wanted, instead of forcing a full rewrite later.",
+      lead: "Pre-draft clarifying questions could",
+      active:
+        "narrow the safety narrative toward the medical writer's framing intent, keeping them in the editorial loop.",
       focus: "copilot-clarify",
     };
   }
   if (slide >= 14 && slide <= 21) {
     return {
-      title:
-        "Each reasoning step links back to the exact rows and sections it came from, so the writer audits a defensible draft instead of trusting a black box.",
+      lead: "Reasoning steps that cite the LFT listing rows, protocol section, and prior-phase CSR could",
+      active:
+        "let the medical writer audit every claim before sign-off.",
+      focus: "copilot-reasoning",
+    };
+  }
+  if (slide === 22) {
+    return {
+      lead: "",
+      active:
+        "Agent drafts three framings of the §12.4 hepatic AE narrative for the medical writer to compare.",
       focus: "copilot-reasoning",
     };
   }
   if (slide >= 23 && slide <= 26) {
     return {
-      title:
-        "The agent drafts a few framings of the same narrative upfront, so the writer keeps editorial judgment in the loop instead of accepting whichever version came out first.",
+      lead: "Multiple framings of the same hepatic AE narrative could",
+      active:
+        "let the medical writer pick conservative, direct, or comparative framing without redrafting from scratch.",
       focus: "copilot-narrative-preview",
+    };
+  }
+  if (slide === 27) {
+    return {
+      lead: "After commit,",
+      active:
+        "the medical writer could re-open the agent's reasoning chain and source evidence at any time.",
+      focus: "editor-narrative",
     };
   }
   if (slide >= 28 && slide <= 31) {
@@ -1446,22 +1475,49 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
         ? "split-view"
         : "editor-narrative";
     return {
-      title:
-        "The writer can pop open the source evidence behind any sentence and pin it side-by-side with the draft, so verification happens in place instead of in another window.",
+      lead: "Opening the LFT listing rows behind the draft, side-by-side with §12.4,",
+      active:
+        "could let the medical writer verify every figure in place.",
       focus,
+    };
+  }
+  if (slide >= 32 && slide <= 36) {
+    return {
+      lead: "Follow-up turn:",
+      active:
+        "agent reasons across regulatory references for authority-aligned phrasings.",
+      focus: "chrome",
+    };
+  }
+  if (slide === 37) {
+    return {
+      lead: "",
+      active:
+        "Agent drafts FDA and EMA versions of the §12.4 resolution-time statement.",
+      focus: "copilot-reasoning",
     };
   }
   if (slide === 38) {
     return {
-      title:
-        "When the same fact needs different phrasing for FDA and EMA, the agent surfaces both region-tagged versions in chat so the writer picks once instead of translating between regulators.",
+      lead: "Region-tagged FDA and EMA phrasings of the same fact could",
+      active:
+        "let the medical writer commit once instead of translating between regulators.",
       focus: "tertiary-wording",
+    };
+  }
+  if (slide === 39) {
+    return {
+      lead: "",
+      active:
+        "Selected EMA wording lands in §12.4 with the agent's audit trail intact.",
+      focus: "editor-narrative",
     };
   }
   if (slide === 40 || slide === 41) {
     return {
-      title:
-        "A relational graph of every artifact feeding the section lets the writer navigate the audit trail by data flow instead of a folder tree, and clicking a node opens it as a tab.",
+      lead: "A relational graph of source listings, protocol sections, and roll-up modules",
+      active:
+        "could let the medical writer navigate the audit trail by data flow.",
       focus: slide === 40 ? "trace-graph" : "protocol-doc",
     };
   }
@@ -1470,8 +1526,9 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
 
 const FRAME_W = 1440;
 const FRAME_H = 900;
-const OUTER_PAD = 40;
-const MAX_SCALE = 0.92;
+const TOP_STRIP = 88;
+const SIDE_PAD = 24;
+const MAX_SCALE = 1.0;
 
 /** White "island" on warm — editor / Copilot / split panes */
 const FLOAT_COL =
@@ -1510,8 +1567,8 @@ export default function PaperFramePage() {
 
   useEffect(() => {
     function recalc() {
-      const availW = Math.max(window.innerWidth - OUTER_PAD * 2, 0);
-      const availH = Math.max(window.innerHeight - OUTER_PAD * 2, 0);
+      const availW = Math.max(window.innerWidth - SIDE_PAD * 2, 0);
+      const availH = Math.max(window.innerHeight - TOP_STRIP, 0);
       const fit = Math.min(availW / FRAME_W, availH / FRAME_H);
       setScale(Math.min(fit, MAX_SCALE));
     }
@@ -1519,6 +1576,8 @@ export default function PaperFramePage() {
     window.addEventListener("resize", recalc);
     return () => window.removeEventListener("resize", recalc);
   }, []);
+
+  const chipRef = useRef<HTMLDivElement | null>(null);
 
   const frame = frames[index];
   const walkthrough = walkthroughMode ? walkthroughForSlideIndex(index) : null;
@@ -1553,46 +1612,59 @@ export default function PaperFramePage() {
   };
 
   return (
-    <div
-      className="h-screen w-screen overflow-hidden bg-warm relative"
-      style={{ padding: OUTER_PAD }}
-    >
+    <div className="h-screen w-screen overflow-hidden bg-warm relative flex flex-col">
+      {/* Top strip — combined floating bar (counter + explanation) */}
       <div
-        className="absolute left-1/2 top-1/2 overflow-visible"
-        style={{
-          width: FRAME_W,
-          height: FRAME_H,
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          transformOrigin: "center center",
-        }}
+        className="shrink-0 w-full flex items-start justify-center px-6 relative z-30"
+        style={{ height: TOP_STRIP }}
       >
-        <div className="flex gap-3 p-3 min-h-0 h-full w-full box-border overflow-hidden">
-          {frame.layout === "csv-viewer" ? (
-            <CsvViewerFrame {...sharedProps} />
-          ) : frame.layout === "side-by-side" ? (
-            <SideBySideFrame {...sharedProps} />
-          ) : frame.layout === "protocol" ? (
-            <ProtocolFrame {...sharedProps} />
-          ) : frame.layout === "trace-map" ? (
-            <TraceMapFrame {...sharedProps} />
-          ) : (
-            <CSRDocFrame {...sharedProps} />
-          )}
+        {walkthrough ? (
+          <WalkthroughBar
+            walkthrough={walkthrough}
+            index={index}
+            total={frames.length}
+            ref={chipRef}
+          />
+        ) : null}
+      </div>
+
+      {/* Canvas — centered in remaining space */}
+      <div
+        className="flex-1 min-h-0 w-full relative flex items-center justify-center"
+        style={{ paddingLeft: SIDE_PAD, paddingRight: SIDE_PAD }}
+      >
+        <div
+          style={{
+            width: FRAME_W,
+            height: FRAME_H,
+            transform: `scale(${scale})`,
+            transformOrigin: "center center",
+          }}
+        >
+          <div className="flex gap-3 p-3 min-h-0 h-full w-full box-border overflow-hidden">
+            {frame.layout === "csv-viewer" ? (
+              <CsvViewerFrame {...sharedProps} />
+            ) : frame.layout === "side-by-side" ? (
+              <SideBySideFrame {...sharedProps} />
+            ) : frame.layout === "protocol" ? (
+              <ProtocolFrame {...sharedProps} />
+            ) : frame.layout === "trace-map" ? (
+              <TraceMapFrame {...sharedProps} />
+            ) : (
+              <CSRDocFrame {...sharedProps} />
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Connector overlay — fixed-position SVG, reads chipRef + target via getBoundingClientRect */}
       {walkthrough ? (
-        <WalkthroughOverlay walkthrough={walkthrough} index={index} />
+        <WalkthroughConnector
+          chipRef={chipRef}
+          focus={walkthrough.focus}
+          index={index}
+        />
       ) : null}
-
-      {/* frame indicator */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2.5 rounded-full px-3 py-1.5 bg-paper/70 text-ink font-[var(--font-inconsolata)] text-[11px] leading-[14px] tracking-[0.02em] backdrop-blur-md border border-hairline-strong shadow-card pointer-events-none select-none">
-        <span className={index === 0 ? "text-faint opacity-40" : "text-muted"}>←</span>
-        <span className="tabular-nums">
-          {index + 1} <span className="text-faint">/</span> {frames.length}
-        </span>
-        <span className={index === frames.length - 1 ? "text-faint opacity-40" : "text-muted"}>→</span>
-      </div>
     </div>
   );
 }
@@ -1620,48 +1692,56 @@ function WalkthroughTarget({
   );
 }
 
-const WalkthroughChip = forwardRef<HTMLDivElement, { walkthrough: Walkthrough }>(
-  function WalkthroughChip({ walkthrough }, ref) {
-    return (
-      <div className="fixed left-1/2 top-[14px] -translate-x-1/2 z-30 pointer-events-none">
-        <AnimatePresence mode="wait">
+const WalkthroughBar = forwardRef<
+  HTMLDivElement,
+  { walkthrough: Walkthrough; index: number; total: number }
+>(function WalkthroughBar({ walkthrough, index, total }, ref) {
+  const textKey = `${walkthrough.lead}|${walkthrough.active}`;
+  return (
+    <div
+      ref={ref}
+      className="flex items-center gap-4 rounded-[28px] bg-paper/80 backdrop-blur-md border border-hairline-strong shadow-pop pointer-events-none select-none mt-3 px-5 py-3 w-[940px] min-h-[64px]"
+    >
+      <div className="flex items-center gap-2.5 font-[var(--font-inconsolata)] text-[12px] leading-[16px] tracking-[0.02em] shrink-0">
+        <span className={index === 0 ? "text-faint opacity-40" : "text-muted"}>←</span>
+        <span className="tabular-nums text-ink">
+          {index + 1} <span className="text-faint">/</span> {total}
+        </span>
+        <span className={index === total - 1 ? "text-faint opacity-40" : "text-muted"}>→</span>
+      </div>
+      <div className="w-px h-4 bg-hairline-strong shrink-0" />
+      <div className="flex-1 min-w-0">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={walkthrough.title}
-            ref={ref}
+            key={textKey}
             initial={{ opacity: 0, y: 2 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -2 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="rounded-[14px] px-3.5 py-1.5 max-w-[720px] text-center"
-            style={{
-              background: "var(--color-walkthrough-glass-bg)",
-              border: "1px solid var(--color-walkthrough-glass-border)",
-              backdropFilter: "blur(10px) saturate(140%)",
-              WebkitBackdropFilter: "blur(10px) saturate(140%)",
-              boxShadow: "var(--shadow-walkthrough)",
-            }}
+            className="font-[var(--font-inconsolata)] text-[12.5px] leading-[18px] tracking-[0.01em]"
           >
-            <div
-              className="font-[var(--font-inter)] font-medium text-[11.5px] leading-[15px] tracking-[-0.005em]"
-              style={{ color: "var(--color-walkthrough-ink)" }}
-            >
-              {walkthrough.title}
-            </div>
+            {walkthrough.lead ? (
+              <>
+                <span className="text-muted">{walkthrough.lead}</span>{" "}
+              </>
+            ) : null}
+            <span className="text-ink">{walkthrough.active}</span>
           </motion.div>
         </AnimatePresence>
       </div>
-    );
-  }
-);
+    </div>
+  );
+});
 
-function WalkthroughOverlay({
-  walkthrough,
+function WalkthroughConnector({
+  chipRef,
+  focus,
   index,
 }: {
-  walkthrough: Walkthrough;
+  chipRef: React.RefObject<HTMLDivElement | null>;
+  focus: WalkthroughFocus;
   index: number;
 }) {
-  const chipRef = useRef<HTMLDivElement | null>(null);
   const [coords, setCoords] = useState<{
     from: { x: number; y: number };
     to: { x: number; y: number };
@@ -1672,7 +1752,7 @@ function WalkthroughOverlay({
       const chip = chipRef.current;
       if (!chip) return;
       const target = document.querySelector<HTMLElement>(
-        `[data-walkthrough-focus="${walkthrough.focus}"]`
+        `[data-walkthrough-focus="${focus}"]`
       );
       if (!target) {
         setCoords(null);
@@ -1692,45 +1772,45 @@ function WalkthroughOverlay({
       window.cancelAnimationFrame(id);
       window.removeEventListener("resize", measure);
     };
-  }, [walkthrough.focus, walkthrough.title, index]);
+  }, [chipRef, focus, index]);
 
-  const pathD = coords ? buildConnectorPath(coords.from, coords.to) : "";
-  const pathKey = `${walkthrough.focus}-${pathD}`;
+  // (path/dot rendered below)
+
+  if (!coords) return null;
+
+  const pathD = buildConnectorPath(coords.from, coords.to);
+  const pathKey = `${focus}-${pathD}`;
 
   return (
-    <>
-      {coords ? (
-        <svg
-          className="fixed inset-0 w-screen h-screen pointer-events-none z-20 overflow-visible"
-          aria-hidden="true"
-        >
-          <motion.path
-            key={pathKey}
-            d={pathD}
-            stroke="var(--color-walkthrough-line)"
-            strokeWidth={1}
-            strokeDasharray="3 4"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
-          />
-          <motion.circle
-            key={`${pathKey}-dot`}
-            cx={coords.to.x}
-            cy={coords.to.y}
-            r={3}
-            fill="var(--color-walkthrough-dot)"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.18, ease: "easeOut", delay: 0.2 }}
-            style={{ transformOrigin: `${coords.to.x}px ${coords.to.y}px` }}
-          />
-        </svg>
-      ) : null}
-      <WalkthroughChip walkthrough={walkthrough} ref={chipRef} />
-    </>
+    <svg
+      className="fixed inset-0 w-screen h-screen pointer-events-none z-40"
+      aria-hidden="true"
+      style={{ overflow: "visible" }}
+    >
+      <motion.path
+        key={pathKey}
+        d={pathD}
+        stroke="var(--color-walkthrough-line)"
+        strokeWidth={1}
+        strokeDasharray="3 4"
+        strokeLinecap="round"
+        fill="none"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+      />
+      <motion.circle
+        key={`${pathKey}-dot`}
+        cx={coords.to.x}
+        cy={coords.to.y}
+        r={3.5}
+        fill="var(--color-walkthrough-dot)"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.18, ease: "easeOut", delay: 0.2 }}
+        style={{ transformOrigin: `${coords.to.x}px ${coords.to.y}px` }}
+      />
+    </svg>
   );
 }
 
@@ -1775,10 +1855,14 @@ function CSRDocFrame({
   tertiaryFollowUps,
   walkthrough,
 }: SharedFrameProps) {
+  const chromeFocused = walkthrough?.focus === "chrome";
   return (
     <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
       {/* Editor column */}
-      <div className={`${FLOAT_COL} flex-1 min-w-0`}>
+      <div
+        className={`${FLOAT_COL} flex-1 min-w-0`}
+        data-walkthrough-focus={chromeFocused ? "chrome" : undefined}
+      >
         {/* Tab bar */}
         <DocTabBar tabDirty={tabDirty} />
 
@@ -3394,7 +3478,7 @@ function ReasonedChipView({ label, expanded }: { label: string; expanded?: boole
 function NarrativeDraftPreviewCard({ preview }: { preview: NarrativeDraftPreview }) {
   const key = `${preview.version}-${preview.framing}`;
   return (
-    <div className="flex flex-col rounded-[14px] overflow-clip bg-paper shadow-pop">
+    <div className="flex flex-col rounded-[14px] overflow-clip bg-paper border border-hairline-strong">
       <div className="flex items-center justify-between py-2 px-3 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <PrevNextNav size="sm" />
@@ -3535,7 +3619,7 @@ function ClarifyCardView({ card }: { card: ClarifyCard }) {
   const answered = card.status === "answered";
 
   return (
-    <div className="flex flex-col rounded-[14px] bg-paper shadow-pop">
+    <div className="flex flex-col rounded-[14px] bg-paper border border-hairline-strong">
       <div className="flex items-center justify-between pt-3.5 pb-1 px-4">
         <div className="flex items-center gap-2">
           {tabs.map((n) => {
@@ -3689,7 +3773,7 @@ function SummaryChip({ choices }: { choices: string[] }) {
 function StepRow({ step }: { step: Step }) {
   const ringClass = step.highlight ? "ring-1 ring-info/60" : "";
   return (
-    <div className={`flex flex-col rounded-[12px] overflow-clip bg-paper shadow-card ${ringClass}`}>
+    <div className={`flex flex-col rounded-[12px] overflow-clip bg-paper border border-hairline ${ringClass}`}>
       <div className="flex items-center justify-between py-2 px-3 gap-2 border-b border-hairline">
         <div className="flex items-center gap-2 min-w-0">
           <AnimatePresence initial={false}>
