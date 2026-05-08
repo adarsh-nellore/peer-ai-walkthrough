@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const fadeIn = {
@@ -105,12 +115,17 @@ type WalkthroughFocus =
   | "protocol-doc";
 
 type Walkthrough = {
-  title: string;
-  subtitle?: string;
+  statement: string;
   focus: WalkthroughFocus;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
 };
+
+const WalkthroughAnchorContext = createContext<{
+  registerAnchor: (el: HTMLElement | null) => void;
+} | null>(null);
+
+function useWalkthroughAnchorRegister() {
+  return useContext(WalkthroughAnchorContext);
+}
 
 type Frame = {
   id: string;
@@ -1413,92 +1428,68 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
   const slide = index + 1; // 1-based slide number
   if (slide >= 6 && slide <= 13) {
     return {
-      title: "Clarifying questions before drafting",
-      subtitle: "Peer narrows framing, subgroup depth, and Phase 2 references.",
+      statement: "Peer narrows the draft with a few targeted questions first.",
       focus: "copilot-clarify",
-      placement: "top",
     };
   }
   if (slide >= 14 && slide <= 21) {
     return {
-      title: "Reasoning chain with source trace",
-      subtitle: "Each step opens the file, filter, and rows behind the narrative.",
+      statement: "Every reasoning step opens the file and rows behind the narrative.",
       focus: "copilot-reasoning",
-      placement: "top",
     };
   }
   if (slide >= 23 && slide <= 26) {
     return {
-      title: "Compare narrative framings",
-      subtitle: "Cycle conservative, direct, and comparative drafts before accepting.",
+      statement: "You compare three framings, then accept the one you want in the CSR.",
       focus: "copilot-narrative-preview",
-      placement: "top",
     };
   }
   if (slide === 28) {
     return {
-      title: "Trace narrative back to evidence",
-      subtitle: "Re-open the LFT rows that drove the draft.",
+      statement: "Jump from the draft back to the LFT rows it came from.",
       focus: "copilot-reasoning",
-      placement: "top",
     };
   }
   if (slide === 29) {
     return {
-      title: "Open the full evidence",
-      subtitle: "Move from snippet to the complete LFT listing.",
+      statement: "The full listing opens when you need more than a rail snippet.",
       focus: "evidence-csv",
-      placement: "top",
     };
   }
   if (slide === 30) {
     return {
-      title: "Side-by-side: narrative and source data",
-      subtitle: "Compare the CSR section against its underlying listing.",
+      statement: "Side-by-side pairs the section with the source data it cites.",
       focus: "split-view",
-      placement: "top",
     };
   }
   if (slide === 31) {
     return {
-      title: "Accepted narrative in §12.4",
-      subtitle: "The chosen draft now lives in the document.",
+      statement: "Accepted copy lands in §12.4 as soon as you confirm it.",
       focus: "editor-narrative",
-      placement: "top",
     };
   }
   if (slide >= 37 && slide <= 38) {
     return {
-      title: "FDA vs EMA wording divergence",
-      subtitle: "Follow-up picks an authority-aligned sentence.",
+      statement: "A follow-up resolves FDA vs EMA wording in one aligned sentence.",
       focus: "tertiary-wording",
-      placement: "top",
     };
   }
   if (slide === 39) {
     return {
-      title: "Decision committed to the CSR",
-      subtitle: "The selected wording lands in the document.",
+      statement: "Your choice is written straight into the CSR.",
       focus: "tertiary-wording",
-      placement: "top",
     };
   }
   if (slide === 40) {
     return {
-      title: "Artifact traceability graph",
-      subtitle: "Relational map of artifacts feeding §12.4.",
+      statement: "Traceability shows how protocol, listings, and prior reports feed §12.4.",
       focus: "trace-graph",
-      placement: "bottom",
-      align: "center",
     };
   }
   if (slide === 41) {
     return {
-      title: "From trace graph to protocol",
-      subtitle: "Nodes open as tabs — verify monitoring rules in the source.",
+      statement: "Opening a graph node drops you into the source so you can verify language.",
       focus: "protocol-doc",
-      placement: "top",
-      align: "center",
     };
   }
   return null;
@@ -1513,10 +1504,129 @@ const MAX_SCALE = 0.92;
 const FLOAT_COL =
   "rounded-[10px] border border-hairline bg-white shadow-card overflow-hidden flex flex-col min-h-0";
 
+const GlassWalkthroughRibbon = forwardRef<HTMLDivElement, { statement: string }>(
+  function GlassWalkthroughRibbon({ statement }, ref) {
+    return (
+      <div
+        ref={ref}
+        className="shrink-0 z-20 flex items-center justify-center px-8 py-3 shadow-pop backdrop-blur-md rounded-b-[14px]"
+        style={{ backgroundColor: "rgba(59, 130, 246, 0.14)" }}
+      >
+        <p className="max-w-[54rem] text-center font-[var(--font-inter)] text-[13px] font-medium leading-snug text-[var(--color-ink)] tracking-[-0.012em]">
+          {statement}
+        </p>
+      </div>
+    );
+  },
+);
+
+function WalkthroughConnectorLayer({
+  rootRef,
+  ribbonRef,
+  anchorEl,
+}: {
+  rootRef: React.RefObject<HTMLDivElement | null>;
+  ribbonRef: React.RefObject<HTMLDivElement | null>;
+  anchorEl: HTMLElement | null;
+}) {
+  const [geom, setGeom] = useState<{
+    w: number;
+    h: number;
+    pathD: string;
+    cx: number;
+    cy: number;
+    r: number;
+  } | null>(null);
+
+  const recompute = useCallback(() => {
+    const root = rootRef.current;
+    const ribbon = ribbonRef.current;
+    if (!root || !ribbon || !anchorEl) {
+      setGeom(null);
+      return;
+    }
+    const rr = root.getBoundingClientRect();
+    const br = ribbon.getBoundingClientRect();
+    const ar = anchorEl.getBoundingClientRect();
+    const w = Math.max(1, rr.width);
+    const h = Math.max(1, rr.height);
+    const sx = br.left + br.width / 2 - rr.left;
+    const sy = br.bottom - rr.top;
+    const ax = ar.left + ar.width / 2 - rr.left;
+    const ay = ar.top - rr.top + 6;
+    const midY = sy + Math.max(24, (ay - sy) * 0.38);
+    const pathD = `M ${sx} ${sy} L ${sx} ${midY} L ${ax} ${midY} L ${ax} ${ay}`;
+    const strokeR = 3.75;
+    setGeom({ w, h, pathD, cx: ax, cy: ay, r: strokeR });
+  }, [rootRef, ribbonRef, anchorEl]);
+
+  useLayoutEffect(() => {
+    recompute();
+  }, [recompute]);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || !anchorEl || !ribbonRef.current) return;
+    window.addEventListener("scroll", recompute, true);
+    const ro = new ResizeObserver(recompute);
+    ro.observe(root);
+    ro.observe(ribbonRef.current);
+    ro.observe(anchorEl);
+    return () => {
+      window.removeEventListener("scroll", recompute, true);
+      ro.disconnect();
+    };
+  }, [rootRef, ribbonRef, anchorEl, recompute]);
+
+  if (!geom) return null;
+  const stroke = "rgba(37, 99, 235, 0.4)";
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-[55] overflow-visible"
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${geom.w} ${geom.h}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <path
+        d={geom.pathD}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={geom.cx} cy={geom.cy} r={geom.r} fill={stroke} />
+    </svg>
+  );
+}
+
 export default function PaperFramePage() {
   const [index, setIndex] = useState(0);
   const [scale, setScale] = useState(MAX_SCALE);
   const [walkthroughMode, setWalkthroughMode] = useState(true);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const ribbonRef = useRef<HTMLDivElement>(null);
+  const connectorRootRef = useRef<HTMLDivElement>(null);
+
+  const registerAnchor = useCallback((el: HTMLElement | null) => {
+    setAnchorEl(el);
+  }, []);
+
+  const anchorCtxValue = useMemo(
+    () => ({ registerAnchor }),
+    [registerAnchor],
+  );
+
+  useEffect(() => {
+    setAnchorEl(null);
+  }, [index]);
+
+  useEffect(() => {
+    if (!walkthroughMode) setAnchorEl(null);
+  }, [walkthroughMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1598,19 +1708,38 @@ export default function PaperFramePage() {
           transformOrigin: "center center",
         }}
       >
-        <div className="flex gap-3 p-3 min-h-0 h-full w-full box-border overflow-hidden">
-          {frame.layout === "csv-viewer" ? (
-            <CsvViewerFrame {...sharedProps} />
-          ) : frame.layout === "side-by-side" ? (
-            <SideBySideFrame {...sharedProps} />
-          ) : frame.layout === "protocol" ? (
-            <ProtocolFrame {...sharedProps} />
-          ) : frame.layout === "trace-map" ? (
-            <TraceMapFrame {...sharedProps} />
-          ) : (
-            <CSRDocFrame {...sharedProps} />
-          )}
-        </div>
+        <WalkthroughAnchorContext.Provider value={anchorCtxValue}>
+          <div
+            ref={connectorRootRef}
+            className="relative flex min-h-0 h-full w-full flex-col overflow-hidden"
+          >
+            {walkthrough ? (
+              <GlassWalkthroughRibbon ref={ribbonRef} statement={walkthrough.statement} />
+            ) : null}
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {walkthrough ? (
+                <WalkthroughConnectorLayer
+                  rootRef={connectorRootRef}
+                  ribbonRef={ribbonRef}
+                  anchorEl={anchorEl}
+                />
+              ) : null}
+              <div className="relative z-10 box-border flex min-h-0 min-w-0 flex-1 gap-3 overflow-hidden p-3">
+                {frame.layout === "csv-viewer" ? (
+                  <CsvViewerFrame {...sharedProps} />
+                ) : frame.layout === "side-by-side" ? (
+                  <SideBySideFrame {...sharedProps} />
+                ) : frame.layout === "protocol" ? (
+                  <ProtocolFrame {...sharedProps} />
+                ) : frame.layout === "trace-map" ? (
+                  <TraceMapFrame {...sharedProps} />
+                ) : (
+                  <CSRDocFrame {...sharedProps} />
+                )}
+              </div>
+            </div>
+          </div>
+        </WalkthroughAnchorContext.Provider>
       </div>
 
       {/* frame indicator */}
@@ -1625,78 +1754,36 @@ export default function PaperFramePage() {
   );
 }
 
-function WalkthroughCalloutChip({ walkthrough }: { walkthrough: Walkthrough }) {
-  return (
-    <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[min(300px,100%)] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-      <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em]">
-        {walkthrough.title}
-      </div>
-      {walkthrough.subtitle ? (
-        <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-          {walkthrough.subtitle}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function WalkthroughCallout({
-  walkthrough,
-  placement = "top",
-  align = "start",
-}: {
-  walkthrough: Walkthrough;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
-}) {
-  const placementClass =
-    placement === "bottom"
-      ? "top-full mt-4"
-      : placement === "left"
-      ? "right-full mr-4 top-1/2 -translate-y-1/2"
-      : placement === "right"
-      ? "left-full ml-4 top-1/2 -translate-y-1/2"
-      : "bottom-full mb-4";
-  const alignClass =
-    placement === "top" || placement === "bottom"
-      ? align === "center"
-        ? "left-1/2 -translate-x-1/2"
-        : align === "end"
-        ? "right-0"
-        : "left-0"
-      : "";
-  return (
-    <div className={`absolute z-30 pointer-events-none ${placementClass} ${alignClass}`}>
-      <WalkthroughCalloutChip walkthrough={walkthrough} />
-    </div>
-  );
-}
-
 function WalkthroughTarget({
   walkthrough,
   match,
   children,
-  placement,
-  align,
   className = "",
 }: {
   walkthrough?: Walkthrough | null;
   match: WalkthroughFocus;
   children: React.ReactNode;
-  placement?: "top" | "bottom" | "left" | "right";
-  align?: "start" | "center" | "end";
   className?: string;
 }) {
   const active = !!walkthrough && walkthrough.focus === match;
+  const ctx = useWalkthroughAnchorRegister();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!active || !ctx) {
+      ctx?.registerAnchor(null);
+      return;
+    }
+    ctx.registerAnchor(ref.current);
+    return () => {
+      ctx.registerAnchor(null);
+    };
+  }, [active, ctx]);
+
   if (!active) return <>{children}</>;
   return (
-    <div className={`relative walkthrough-spotlight ${className}`}>
+    <div ref={ref} className={`relative walkthrough-spotlight ${className}`}>
       {children}
-      <WalkthroughCallout
-        walkthrough={walkthrough!}
-        placement={placement ?? walkthrough!.placement}
-        align={align ?? walkthrough!.align}
-      />
     </div>
   );
 }
@@ -2392,30 +2479,14 @@ function CsvDocBody({
   padding,
   showHeaderActions,
   paddingTop = "pt-6",
-  walkthrough,
 }: {
   showFooterAction: boolean;
   padding: string;
   showHeaderActions: boolean;
   paddingTop?: string;
-  walkthrough?: Walkthrough | null;
 }) {
   return (
     <div className={`flex flex-col grow ${paddingTop} overflow-auto ${padding} min-h-0 relative`}>
-      {walkthrough?.focus === "evidence-csv" ? (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-            <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
-              {walkthrough.title}
-            </div>
-            {walkthrough.subtitle ? (
-              <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-                {walkthrough.subtitle}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
       <div className="flex items-center mb-3 gap-2.5 font-[var(--font-inconsolata)] text-[11px] leading-[14px] whitespace-nowrap overflow-hidden">
         <span className="tracking-[0.06em] font-bold text-[#1A1B1F] shrink-0">EVIDENCE</span>
         <span className="tracking-[0.04em] text-[#8E939A] shrink-0">·</span>
@@ -2558,15 +2629,16 @@ function CsvViewerFrame({
 }: SharedFrameProps) {
   return (
     <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
-      <div className={`${FLOAT_COL} flex-1 min-w-0`}>
-        <CsvActiveTabBar />
-        <CsvDocBody
-          showFooterAction={true}
-          padding="px-[60px]"
-          showHeaderActions={true}
-          walkthrough={walkthrough}
-        />
-      </div>
+      <WalkthroughTarget walkthrough={walkthrough} match="evidence-csv">
+        <div className={`${FLOAT_COL} flex-1 min-w-0`}>
+          <CsvActiveTabBar />
+          <CsvDocBody
+            showFooterAction={true}
+            padding="px-[60px]"
+            showHeaderActions={true}
+          />
+        </div>
+      </WalkthroughTarget>
       <CopilotRail
         messages={messages}
         input={input}
@@ -2624,7 +2696,7 @@ function SideBySideFrame({
         <div className={`${FLOAT_COL} shrink-0`}>
           <SplitTabBar />
         </div>
-        <div className="flex flex-1 min-h-0 gap-3 min-w-0 relative">
+        <WalkthroughTarget walkthrough={walkthrough} match="split-view" className="flex flex-1 min-h-0 min-w-0 gap-3">
           <div className={`${FLOAT_COL} flex-1 min-w-0`}>
             <CSRDocBody
               hideGrade3={hideGrade3}
@@ -2645,21 +2717,7 @@ function SideBySideFrame({
               paddingTop="pt-6"
             />
           </div>
-          {walkthrough?.focus === "split-view" ? (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-              <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-                <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
-                  {walkthrough.title}
-                </div>
-                {walkthrough.subtitle ? (
-                  <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-                    {walkthrough.subtitle}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        </WalkthroughTarget>
       </div>
       <CopilotRail
         messages={messages}
@@ -2794,19 +2852,12 @@ function ProtocolFrame({
 }: SharedFrameProps) {
   return (
     <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
-      <div
-        className={`relative ${FLOAT_COL} flex-1 min-w-0 ${
-          walkthrough?.focus === "protocol-doc" ? "walkthrough-spotlight" : ""
-        }`}
-      >
-        {walkthrough?.focus === "protocol-doc" ? (
-          <div className="absolute left-1/2 top-14 -translate-x-1/2 z-50 pointer-events-none px-3 w-full max-w-[380px] flex justify-center">
-            <WalkthroughCalloutChip walkthrough={walkthrough} />
-          </div>
-        ) : null}
-        <ProtocolTabBar />
-        <ProtocolDocBody padding="px-20" />
-      </div>
+      <WalkthroughTarget walkthrough={walkthrough} match="protocol-doc">
+        <div className={`${FLOAT_COL} flex-1 min-w-0`}>
+          <ProtocolTabBar />
+          <ProtocolDocBody padding="px-20" />
+        </div>
+      </WalkthroughTarget>
       <CopilotRail
         messages={messages}
         input={input}
@@ -2833,27 +2884,28 @@ function ProtocolFrame({
 
 function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
   const focused = walkthrough?.focus === "trace-graph";
+  const ctx = useWalkthroughAnchorRegister();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!focused || !ctx) {
+      ctx?.registerAnchor(null);
+      return;
+    }
+    ctx.registerAnchor(cardRef.current);
+    return () => {
+      ctx.registerAnchor(null);
+    };
+  }, [focused, ctx]);
+
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-warm/65 backdrop-blur-[1px] px-6">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-warm/65 backdrop-blur-[1px] px-6">
       <div
+        ref={cardRef}
         className={`flex flex-col w-full max-w-[1090px] rounded-2xl bg-white border border-[#E5E7EB] shadow-[0_24px_48px_rgba(15,18,22,0.18)] overflow-hidden relative ${
           focused ? "walkthrough-spotlight" : ""
         }`}
       >
-        {focused && walkthrough ? (
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 pointer-events-none">
-            <div className="flex flex-col gap-0.5 rounded-md py-1.5 px-2.5 max-w-[300px] bg-white border border-[var(--color-walkthrough-ring)] shadow-[0_6px_18px_-6px_rgba(37,99,235,0.30)]">
-              <div className="font-[var(--font-inter)] font-semibold text-[var(--color-walkthrough-ink)] text-[11px] leading-[14px] tracking-[-0.005em] whitespace-nowrap">
-                {walkthrough.title}
-              </div>
-              {walkthrough.subtitle ? (
-                <div className="font-[var(--font-inter)] text-[#5A5E66] text-[10.5px] leading-[14px]">
-                  {walkthrough.subtitle}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E5E7EB] gap-4 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <svg
