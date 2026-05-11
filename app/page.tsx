@@ -1625,22 +1625,21 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "editor-narrative",
     };
   }
-  if (slide === 33) {
+  if (slide >= 33 && slide <= 34) {
     return {
       title: "Follow-up prompt",
       lead: "",
-      active:
-        "The writer asks the agent to add a statement on resolution time. The agent responds with how it plans to handle the phrasing before drafting either version.",
+      active: "The writer asks the agent to add a statement on resolution time.",
       focus: "copilot-thread",
     };
   }
-  if (slide >= 34 && slide <= 36) {
+  if (slide >= 35 && slide <= 36) {
     return {
       title: "Agent reasoning",
       lead: "",
       active:
-        "Pulling the resolution-time data, the agent notices FDA and EMA reference styles phrase the same pharmacovigilance window differently. It flags the divergence to the writer before generating either version.",
-      focus: "copilot-thread",
+        "The agent walks through its reasoning and points to the source data it's pulling from (the LFT listings and the prior-phase CSR baseline).",
+      focus: "copilot-reasoning",
     };
   }
   if (slide >= 37 && slide <= 39) {
@@ -1650,7 +1649,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "FDA vs EMA Diff Analysis",
       lead: "",
       active:
-        "Two phrasings of the same fact, labeled FDA and EMA, drawn from one factual basis. The writer sees how each authority differs in wording, data emphasis, and argument, and picks once without leaving §12.4.",
+        "While drafting, the agent flags that FDA and EMA reference styles phrase the same pharmacovigilance window differently and shows both versions side by side. The writer picks once and both submissions stay locked to the same factual basis, with no parallel drafting or hand-translating between authority styles.",
       focus,
     };
   }
