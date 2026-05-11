@@ -1592,7 +1592,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Multiple Suggestions",
       lead: "",
       active:
-        "Instead of one draft, the agent returns three framings of §12.4 from the same factual basis (conservative, direct, comparative). The writer picks the one that matches the sponsor's risk posture without re-prompting their way toward it.",
+        "Instead of one draft, the agent returns three framings of §12.4 (conservative, direct, comparative) from the same factual basis. Picking between options gives the writer direct control over tone, argument, and emphasis, the same way comparing AI-generated email drafts beats re-prompting until one fits.",
       focus,
     };
   }
