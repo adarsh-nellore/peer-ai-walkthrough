@@ -113,7 +113,8 @@ type WalkthroughFocus =
   | "tertiary-wording"
   | "trace-graph"
   | "protocol-doc"
-  | "map-button";
+  | "map-button"
+  | "trace-node-protocol";
 
 type Walkthrough = {
   /** Feature name shown as a small kicker above the body text. */
@@ -1481,6 +1482,43 @@ const frames: Frame[] = [
     tertiaryAcceptedChip: { label: "Accepted · EMA wording", revisit: true },
   },
   {
+    id: "QAA-0",
+    layout: "trace-map",
+    messages: [
+      { role: "user", time: "14:03", text: "Re-draft the §12.4 hepatic AE narrative." },
+      {
+        role: "assistant",
+        time: "14:03",
+        summary: ["Magnitude", "Subgroup table", "Phase 2 inline"],
+      },
+    ],
+    input: "",
+    placeholder: "Type here…",
+    avatar: "outline",
+    hideGrade3: true,
+    narrativeBody:
+      "The hepatic AE rate in Aurora-IV (8.2%; n=49/598) tracks the Phase 2 finding (7.6%; n=18/237 in Phase2-CSR-007 §5.2), suggesting a stable safety profile across studies. Two Grade 3 events met DILI criteria; both resolved on discontinuation. No Hy's Law cases were observed.",
+    tertiaryDocParagraph:
+      "Most events resolved within a median of 21 days, consistent with the 14–28 day pharmacovigilance window.",
+    reasonedChip: { label: "Reasoned · 6 steps · 12s" },
+    acceptedChip: { label: "Accepted · v3 comparative", revisit: true },
+    secondaryMessages: [
+      { role: "user", time: "14:03", text: "Add a statement on resolution time." },
+      { role: "assistant", time: "14:03" },
+    ],
+    secondarySteps: [
+      {
+        title: "Pulled resolution time data",
+        step: "",
+        done: true,
+        file: { badge: "csv", badgeStyle: "csv", fileName: "Phase3-LFT-Listings.csv" },
+      },
+    ],
+    tertiaryText:
+      "Writing the statement. While cross-checking, I noticed FDA and EMA phrase resolution time slightly differently. Which would you like to use?",
+    tertiaryAcceptedChip: { label: "Accepted · EMA wording", revisit: true },
+  },
+  {
     id: "QAN-0",
     layout: "protocol",
     messages: [
@@ -1623,13 +1661,31 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "map-button",
     };
   }
-  if (slide === 42 || slide === 43) {
+  if (slide === 42) {
     return {
       title: "Traceability graph",
       lead: "",
       active:
-        "A relational graph of source listings, protocol sections, and roll-up modules surfaces every Module 2.5 / 2.7 summary that quotes a §12.4 change, catching downstream inconsistencies without manual ripple-tracing.",
-      focus: slide === 42 ? "trace-graph" : "protocol-doc",
+        "The doc pipeline rendered as a map. Source listings, protocol sections, and roll-up modules sit in one relational view, so the writer can both catch downstream inconsistencies and navigate the trial's documents by their actual citation paths instead of folder hunting.",
+      focus: "trace-graph",
+    };
+  }
+  if (slide === 43) {
+    return {
+      title: "Traceability graph",
+      lead: "",
+      active:
+        "Clicking Protocol_v4.2 in the map opens it directly as a tab. Navigation follows the citation graph: from §12.4 back upstream to the source the agent quoted, in one click.",
+      focus: "trace-node-protocol",
+    };
+  }
+  if (slide === 44) {
+    return {
+      title: "Traceability graph",
+      lead: "",
+      active:
+        "The protocol opens in its own tab, reached through the doc linkage rather than a flat file list. The graph becomes the primary way to move between the documents that share evidence with §12.4.",
+      focus: "protocol-doc",
     };
   }
   return null;
@@ -1661,8 +1717,9 @@ function dwellMs(slide: number): number {
   if (slide === 39) return 5600;
   if (slide === 40) return 3600;
   if (slide === 41) return 3200;
-  if (slide === 42) return 8400;
-  if (slide === 43) return 7000;
+  if (slide === 42) return 6400;
+  if (slide === 43) return 5600;
+  if (slide === 44) return 7000;
   return 4200;
 }
 
@@ -3321,7 +3378,7 @@ function TraceMapModal({ walkthrough }: { walkthrough?: Walkthrough | null }) {
           </div>
         </div>
         <div className="grow relative overflow-hidden bg-paper" style={{ aspectRatio: "1090 / 560" }}>
-          <TraceMapCanvas />
+          <TraceMapCanvas walkthrough={walkthrough} />
         </div>
         <div className="flex items-center justify-between px-5 py-2.5 border-t border-hairline font-[var(--font-inter)] text-[11px] leading-[14px] text-faint shrink-0">
           <div>drag to pan · scroll to zoom · click a node to open as tab</div>
@@ -3367,10 +3424,12 @@ const TRACE_NODES: {
   { x: 870, y: 226, w: 144, badge: "pdf", name: "DSUR-2025", sub: "Annual safety update" },
 ];
 
-function TraceMapCanvas() {
+function TraceMapCanvas({ walkthrough }: { walkthrough?: Walkthrough | null }) {
   // Coordinate space matches Paper artboard (1090 × 560).
   const W = 1090;
   const H = 560;
+  const selectedName =
+    walkthrough?.focus === "trace-node-protocol" ? "Protocol_v4.2" : undefined;
   return (
     <div className="absolute inset-0">
       <svg
@@ -3488,6 +3547,7 @@ function TraceMapCanvas() {
           name={n.name}
           sub={n.sub}
           highlight={n.highlight}
+          selected={n.name === selectedName}
         />
       ))}
 
@@ -3550,6 +3610,7 @@ function TraceNode({
   name,
   sub,
   highlight,
+  selected,
 }: {
   left: number;
   top: number;
@@ -3559,6 +3620,7 @@ function TraceNode({
   name: string;
   sub: string;
   highlight?: boolean;
+  selected?: boolean;
 }) {
   const badgeStyles =
     badge === "csv"
@@ -3566,13 +3628,15 @@ function TraceNode({
       : badge === "pdf"
         ? "bg-pink text-pink-ink"
         : "bg-soft text-faint";
+  const ringClasses = selected || highlight
+    ? "ring-[1.5px] ring-coral shadow-[0_0_0_6px_rgba(255,78,73,0.08),0_4px_14px_-4px_rgba(255,78,73,0.20)]"
+    : "border border-hairline shadow-card";
   return (
     <div
       data-click-hint={highlight ? "trace-node-current" : undefined}
-      className={`absolute flex items-center gap-2 px-3 rounded-[14px] bg-paper transition-shadow ${
-        highlight
-          ? "ring-[1.5px] ring-coral shadow-[0_0_0_6px_rgba(255,78,73,0.08),0_4px_14px_-4px_rgba(255,78,73,0.20)]"
-          : "border border-hairline shadow-card"
+      data-walkthrough-focus={selected ? "trace-node-protocol" : undefined}
+      className={`absolute flex items-center gap-2 px-3 rounded-[14px] bg-paper transition-shadow ${ringClasses} ${
+        selected ? "walkthrough-spotlight" : ""
       }`}
       style={{
         left: `${left}%`,
