@@ -1929,18 +1929,18 @@ export default function PaperFramePage() {
 function CoverScreen({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center px-6">
-      <div className="flex flex-col items-center text-center max-w-[640px] gap-7">
-        <div className="font-[var(--font-inconsolata)] text-coral text-[12px] tracking-[0.18em] uppercase">
-          Peer AI
-        </div>
+      <div className="flex flex-col items-center text-center max-w-[680px] gap-6">
         <h1 className="font-[var(--font-display)] text-ink text-[56px] leading-[105%] tracking-[-0.02em]">
-          Potential Design Patterns
+          Peer AI <span className="text-faint">·</span> Potential Design Patterns
         </h1>
-        <p className="font-[var(--font-inter)] text-muted text-[16px] leading-[160%] max-w-[560px]">
-          Unsolicited design explorations from Adarsh on what AI-assisted
-          medical writing could look like. Each beat traces a specific UX
-          pattern, agent interaction, or human-in-the-loop moment that would
-          sharpen the writer&apos;s flow.
+        <div className="font-[var(--font-inconsolata)] text-coral text-[12px] tracking-[0.18em] uppercase">
+          by Adarsh Nellore
+        </div>
+        <p className="font-[var(--font-inter)] text-muted text-[16px] leading-[160%] max-w-[560px] mt-1">
+          Unsolicited design explorations on what AI-assisted medical writing
+          could look like. Each beat traces a specific UX pattern, agent
+          interaction, or human-in-the-loop moment that would sharpen the
+          writer&apos;s flow.
         </p>
         <div className="flex items-center gap-2.5 mt-2 font-[var(--font-inconsolata)] text-faint text-[11px] tracking-[0.08em] uppercase">
           <KeyChip label="←" />
