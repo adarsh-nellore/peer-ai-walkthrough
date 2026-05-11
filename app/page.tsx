@@ -1748,6 +1748,7 @@ export default function PaperFramePage() {
   const [walkthroughMode, setWalkthroughMode] = useState(true);
   // Arrow keys are the primary nav. Auto-advance is opt-in via `?auto=1` or the `a` key.
   const [autoMode, setAutoMode] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1762,6 +1763,13 @@ export default function PaperFramePage() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (!started) {
+        if (e.key === "ArrowRight" || e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setStarted(true);
+        }
+        return;
+      }
       if (e.key === "ArrowRight") {
         setIndex((i) => Math.min(i + 1, frames.length - 1));
       } else if (e.key === "ArrowLeft") {
@@ -1777,7 +1785,7 @@ export default function PaperFramePage() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [started]);
 
   const [remainingMs, setRemainingMs] = useState(0);
 
@@ -1852,6 +1860,17 @@ export default function PaperFramePage() {
     walkthrough,
   };
 
+  if (!started) {
+    return (
+      <div
+        className="overflow-hidden bg-warm relative"
+        style={{ height: "100dvh", width: "100dvw" }}
+      >
+        <CoverScreen onBegin={() => setStarted(true)} />
+      </div>
+    );
+  }
+
   return (
     <div
       className="overflow-hidden bg-warm relative"
@@ -1913,6 +1932,48 @@ export default function PaperFramePage() {
         />
       ) : null}
     </div>
+  );
+}
+
+function CoverScreen({ onBegin }: { onBegin: () => void }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-6">
+      <div className="flex flex-col items-center text-center max-w-[640px] gap-7">
+        <div className="font-[var(--font-inconsolata)] text-coral text-[12px] tracking-[0.18em] uppercase">
+          Peer AI
+        </div>
+        <h1 className="font-[var(--font-display)] text-ink text-[56px] leading-[105%] tracking-[-0.02em]">
+          Potential Design Patterns
+        </h1>
+        <p className="font-[var(--font-inter)] text-muted text-[16px] leading-[160%] max-w-[560px]">
+          Unsolicited design explorations from Adarsh on what AI-assisted
+          medical writing could look like. Each beat traces a specific UX
+          pattern, agent interaction, or human-in-the-loop moment that would
+          sharpen the writer&apos;s flow.
+        </p>
+        <div className="flex items-center gap-2.5 mt-2 font-[var(--font-inconsolata)] text-faint text-[11px] tracking-[0.08em] uppercase">
+          <KeyChip label="←" />
+          <KeyChip label="→" />
+          <span>navigate with arrow keys</span>
+        </div>
+        <button
+          type="button"
+          onClick={onBegin}
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-coral text-white px-6 py-3 font-[var(--font-inter)] font-medium text-[14px] leading-[18px] tracking-[-0.005em] shadow-pop hover:opacity-95 transition-opacity cursor-pointer"
+        >
+          Begin
+          <span aria-hidden>→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function KeyChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-[8px] bg-paper border border-hairline-strong shadow-card text-ink text-[13px] leading-3">
+      {label}
+    </span>
   );
 }
 
