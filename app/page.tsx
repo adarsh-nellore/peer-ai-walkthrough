@@ -1559,7 +1559,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Opening prompt",
       lead: "",
       active:
-        "The user prompts Peer to re-draft a section of the CSR. The agent receives the request and starts reasoning before generating any text.",
+        "The writer prompts Peer to re-draft §12.4 of the CSR. The agent receives the request and starts reasoning before producing any text.",
       focus: "copilot-thread",
     };
   }
@@ -1568,7 +1568,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Clarifying Questions",
       lead: "",
       active:
-        "Rather than immediately generating text, the agent asks a couple of simple follow-up questions to clarify the user's intent. This sharpens the one-shot output so the user isn't re-prompting, forces the writer to clarify their own thinking, and builds trust in the agent's analysis.",
+        "Before drafting, the agent asks two or three short follow-ups to lock in what the writer actually wants §12.4 to say. The one-shot output gets sharper, the writer surfaces their own assumptions, and trust builds because the agent has proved it read the request.",
       focus: "copilot-clarify",
     };
   }
@@ -1577,7 +1577,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Transparent Reasoning with Traceable Sources",
       lead: "",
       active:
-        "Once the user has answered, the agent makes its reasoning transparent through streaming and, per turn, highlights the exact section of data each step references. Reg professionals can audit the agent's thinking, fall back when it makes mistakes, and navigate straight to the underlying data inputs.",
+        "Once the writer answers, the agent streams its reasoning step by step and pins each step to the exact LFT row, protocol section, or prior-phase CSR it pulled from. Reg writers audit each claim against the raw data, recover fast when the agent slips, and navigate from any sentence back to its source.",
       focus: "copilot-reasoning",
     };
   }
@@ -1592,7 +1592,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Multiple Suggestions",
       lead: "",
       active:
-        "Instead of generating a single output, the agent proposes multiple variations of the same narrative (conservative, direct, comparative). The user picks the framing that matches their perceived risk level, avoiding drift between intent and output without re-prompting.",
+        "Instead of one draft, the agent returns three framings of §12.4 from the same factual basis (conservative, direct, comparative). The writer picks the one that matches the sponsor's risk posture without re-prompting their way toward it.",
       focus,
     };
   }
@@ -1607,7 +1607,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Agent's Paper Trail",
       lead: "",
       active:
-        "The user can reopen the agent's reasoning trail at any time to audit its thinking. Clicking a data snippet or file opens the underlying source in a new tab, so medical writers can trace the specific data supporting each line of their narrative.",
+        "The reasoning trail stays attached to the landed narrative. Clicking any cited row or file opens the underlying source in a new tab, so the writer traces the specific LFT listing or protocol section behind a sentence without leaving §12.4.",
       focus,
     };
   }
@@ -1616,7 +1616,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Side-By-Side View",
       lead: "",
       active:
-        "The user views the working doc and the source files side by side without leaving the doc. Useful for manually auditing the agent's thinking and for navigating between data sources in one pane.",
+        "§12.4 and the source listing render in one split pane. The writer cross-checks the agent's numbers against the raw rows without bouncing between tools.",
       focus: "split-view",
     };
   }
@@ -1625,7 +1625,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Back to the doc",
       lead: "",
       active:
-        "The user closes the evidence view and returns to the working doc. The verified narrative stays in place with its citations attached.",
+        "The writer closes the source pane and returns to §12.4. The verified narrative stays in place with its citations attached.",
       focus: "editor-narrative",
     };
   }
@@ -1634,7 +1634,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Follow-up prompt",
       lead: "",
       active:
-        "The user prompts the agent to generate a statement on resolution time. The agent responds with its rationale before drafting either version.",
+        "The writer asks the agent to add a statement on resolution time. The agent responds with how it plans to handle the phrasing before drafting either version.",
       focus: "copilot-thread",
     };
   }
@@ -1643,7 +1643,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Agent reasoning",
       lead: "",
       active:
-        "While pulling the resolution-time data, the agent notices FDA and EMA reference styles phrase the same fact differently. It surfaces the divergence to the user before drafting either version.",
+        "Pulling the resolution-time data, the agent notices FDA and EMA reference styles phrase the same pharmacovigilance window differently. It flags the divergence to the writer before generating either version.",
       focus: "copilot-thread",
     };
   }
@@ -1654,7 +1654,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "FDA vs EMA Diff Analysis",
       lead: "",
       active:
-        "In-line FDA vs EMA diff analysis. The user gets immediate insight into how the same narrative differs between health authorities (phrasing, data emphasis, argument) from a single source, and compares them without leaving the doc.",
+        "Two phrasings of the same fact, labeled FDA and EMA, drawn from one factual basis. The writer sees how each authority differs in wording, data emphasis, and argument, and picks once without leaving §12.4.",
       focus,
     };
   }
@@ -1663,7 +1663,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "FDA vs EMA Diff Analysis",
       lead: "",
       active:
-        "The chosen EMA wording lands in §12.4 with the agent's audit trail intact. QA can defend the number with one chain back to the source rather than stitching together emails and SAS outputs.",
+        "The chosen EMA wording lands in §12.4 with the audit trail intact. QA defends the number with one chain back to the source rather than stitching together emails and SAS outputs.",
       focus: "editor-tertiary",
     };
   }
