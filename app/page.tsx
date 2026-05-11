@@ -824,6 +824,32 @@ const frames: Frame[] = [
     narrativeBody:
       "The hepatic AE rate in Aurora-IV (8.2%; n=49/598) tracks the Phase 2 finding (7.6%; n=18/237 in Phase2-CSR-007 §5.2), suggesting a stable safety profile across studies. Two Grade 3 events met DILI criteria; both resolved on discontinuation. No Hy's Law cases were observed.",
     reasonedChip: { label: "Reasoned · 6 steps · 12s" },
+    steps: [
+      {
+        title: "Read Phase 2 hepatic AE baseline",
+        step: "step 1 of 4",
+        done: true,
+        file: { badge: "md", fileName: "Phase2-CSR-007.md", section: "§5.2" },
+      },
+      {
+        title: "Pulled LFT rows where ALT > 3×ULN",
+        step: "step 2 of 4",
+        done: true,
+        file: { badge: "csv", badgeStyle: "csv", fileName: "Phase3-LFT-Listings.csv" },
+      },
+      {
+        title: "Cross-checked Phase 2 hepatic findings",
+        step: "step 3 of 4",
+        done: true,
+        file: { badge: "md", fileName: "Phase2-CSR-007.md", section: "§5.2" },
+      },
+      {
+        title: "Reconciled FDA / EMA divergence on resolution time",
+        step: "step 4 of 4",
+        done: true,
+        file: { badge: "pdf", badgeStyle: "pdf", fileName: "Protocol_v4.2" },
+      },
+    ],
     acceptedChip: { label: "Accepted · v3 comparative", revisit: true },
   },
   {
