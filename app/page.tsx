@@ -1929,8 +1929,8 @@ export default function PaperFramePage() {
 function CoverScreen({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center px-6">
-      <div className="flex flex-col items-center text-center max-w-[680px] gap-6">
-        <h1 className="font-[var(--font-display)] text-ink text-[56px] leading-[105%] tracking-[-0.02em]">
+      <div className="flex flex-col items-center text-center max-w-[760px] gap-6">
+        <h1 className="font-[var(--font-display)] text-ink text-[42px] leading-[110%] tracking-[-0.02em] whitespace-nowrap">
           Peer AI <span className="text-faint">·</span> Potential Design Patterns
         </h1>
         <div className="font-[var(--font-inconsolata)] text-coral text-[12px] tracking-[0.18em] uppercase">
