@@ -1662,39 +1662,30 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "editor-tertiary",
     };
   }
-  if (slide === 41) {
+  if (slide === 41 || slide === 42) {
     return {
-      title: "Traceability graph",
+      title: "Traceability Map",
       lead: "",
       active:
-        "The writer clicks the map icon in the editor to open the traceability view. §12.4 surfaces as one node in the doc pipeline rather than a standalone file.",
-      focus: "map-button",
-    };
-  }
-  if (slide === 42) {
-    return {
-      title: "Traceability graph",
-      lead: "",
-      active:
-        "The doc pipeline rendered as a map: source listings, protocol sections, and roll-up modules in one relational view. Useful both for catching downstream inconsistencies and for navigating the trial's documents by citation path instead of folder hunting.",
-      focus: "trace-graph",
+        "The writer opens the traceability view: the same relational map of sources, protocol sections, and roll-up modules that the agent already uses when reasoning across uploaded docs. Navigation follows the citation path instead of folder hunting, broken citations surface in place, and downstream inconsistencies become navigable instead of being ripple-traced by hand.",
+      focus: slide === 41 ? "map-button" : "trace-graph",
     };
   }
   if (slide === 43) {
     return {
-      title: "Traceability graph",
+      title: "Traceability Map",
       lead: "",
       active:
-        "The writer clicks Protocol_v4.2 in the map to open it as a tab. Navigation follows the citation graph upstream from §12.4 to the source the agent quoted.",
+        "Clicking Protocol_v4.2 in the map jumps directly to the source §12.4 quotes. The same gesture doubles as an audit trail: any citation in the doc traces back to the exact protocol section, LFT row, or prior CSR the agent pulled it from.",
       focus: "trace-node-protocol",
     };
   }
   if (slide === 44) {
     return {
-      title: "Traceability graph",
+      title: "Traceability Map",
       lead: "",
       active:
-        "The protocol opens in its own tab, reached through doc linkage rather than a flat file list. The graph stays the primary surface for moving between documents that share evidence with §12.4.",
+        "The writer has navigated to an upstream data source through the map. The protocol opens in its own tab, reached by following the citation graph from §12.4 rather than hunting through a flat file list.",
       focus: "protocol-doc",
     };
   }
