@@ -1598,11 +1598,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
   }
   if (slide >= 28 && slide <= 30) {
     const focus: WalkthroughFocus =
-      slide === 29
-        ? "copilot-reasoning"
-        : slide === 30
-        ? "evidence-csv"
-        : "editor-narrative";
+      slide === 30 ? "evidence-csv" : "copilot-reasoning";
     return {
       title: "Agent's Paper Trail",
       lead: "",
