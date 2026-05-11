@@ -1657,7 +1657,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Traceability graph",
       lead: "",
       active:
-        "Clicking the map icon in the editor opens the traceability graph: a relational view of every source listing, protocol section, and roll-up module that touches §12.4, so the writer can see what downstream documents will need to move with this edit.",
+        "The writer clicks the map icon in the editor to open the traceability view. §12.4 surfaces as one node in the doc pipeline rather than a standalone file.",
       focus: "map-button",
     };
   }
@@ -1666,7 +1666,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Traceability graph",
       lead: "",
       active:
-        "The doc pipeline rendered as a map. Source listings, protocol sections, and roll-up modules sit in one relational view, so the writer can both catch downstream inconsistencies and navigate the trial's documents by their actual citation paths instead of folder hunting.",
+        "The doc pipeline rendered as a map: source listings, protocol sections, and roll-up modules in one relational view. Useful both for catching downstream inconsistencies and for navigating the trial's documents by citation path instead of folder hunting.",
       focus: "trace-graph",
     };
   }
@@ -1675,7 +1675,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Traceability graph",
       lead: "",
       active:
-        "Clicking Protocol_v4.2 in the map opens it directly as a tab. Navigation follows the citation graph: from §12.4 back upstream to the source the agent quoted, in one click.",
+        "The writer clicks Protocol_v4.2 in the map to open it as a tab. Navigation follows the citation graph upstream from §12.4 to the source the agent quoted.",
       focus: "trace-node-protocol",
     };
   }
@@ -1684,7 +1684,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Traceability graph",
       lead: "",
       active:
-        "The protocol opens in its own tab, reached through the doc linkage rather than a flat file list. The graph becomes the primary way to move between the documents that share evidence with §12.4.",
+        "The protocol opens in its own tab, reached through doc linkage rather than a flat file list. The graph stays the primary surface for moving between documents that share evidence with §12.4.",
       focus: "protocol-doc",
     };
   }
