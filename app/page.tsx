@@ -1559,96 +1559,111 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Opening prompt",
       lead: "",
       active:
-        "The medical writer types a prompt, and the agent reasons first and asks back before writing, so the writer isn't reviewing a draft built on the wrong assumption.",
+        "The user prompts Peer to re-draft a section of the CSR. The agent receives the request and starts reasoning before generating any text.",
       focus: "copilot-thread",
     };
   }
   if (slide >= 6 && slide <= 13) {
     return {
-      title: "Clarifying questions",
+      title: "Clarifying Questions",
       lead: "",
       active:
-        "The agent asks two or three short follow-ups to pin down the writer's intent before drafting, so the wrong framing of a Grade 3 safety event doesn't land in the narrative.",
+        "Rather than immediately generating text, the agent asks a couple of simple follow-up questions to clarify the user's intent. This sharpens the one-shot output so the user isn't re-prompting, forces the writer to clarify their own thinking, and builds trust in the agent's analysis.",
       focus: "copilot-clarify",
     };
   }
   if (slide >= 14 && slide <= 22) {
     return {
-      title: "Reasoning steps",
+      title: "Transparent Reasoning with Traceable Sources",
       lead: "",
       active:
-        "The agent shows its reasoning with the exact sources cited (LFT rows, protocol section, prior-phase CSR), so the writer can audit each claim against the raw data instead of trusting an unattributed number.",
+        "Once the user has answered, the agent makes its reasoning transparent through streaming and, per turn, highlights the exact section of data each step references. Reg professionals can audit the agent's thinking, fall back when it makes mistakes, and navigate straight to the underlying data inputs.",
       focus: "copilot-reasoning",
     };
   }
-  if (slide === 23) {
+  if (slide >= 23 && slide <= 27) {
+    const focus: WalkthroughFocus =
+      slide === 23
+        ? "copilot-reasoning"
+        : slide === 27
+        ? "editor-narrative"
+        : "copilot-narrative-preview";
     return {
-      title: "Suggested narratives",
+      title: "Multiple Suggestions",
       lead: "",
       active:
-        "The agent drafts three framings of §12.4 side-by-side so the writer can spot subtle bias that wouldn't show up reading one draft at a time.",
-      focus: "copilot-reasoning",
+        "Instead of generating a single output, the agent proposes multiple variations of the same narrative (conservative, direct, comparative). The user picks the framing that matches their perceived risk level, avoiding drift between intent and output without re-prompting.",
+      focus,
     };
   }
-  if (slide >= 24 && slide <= 26) {
-    return {
-      title: "Suggested narratives",
-      lead: "",
-      active:
-        "Three takes on the same narrative (conservative, direct, comparative) replace the redraft-from-scratch cycle with a closest-fit pick to the sponsor's voice.",
-      focus: "copilot-narrative-preview",
-    };
-  }
-  if (slide >= 27 && slide <= 32) {
+  if (slide >= 28 && slide <= 30) {
     const focus: WalkthroughFocus =
       slide === 29
         ? "copilot-reasoning"
         : slide === 30
         ? "evidence-csv"
-        : slide === 31
-        ? "split-view"
         : "editor-narrative";
     return {
-      title: "Paper trail",
+      title: "Agent's Paper Trail",
       lead: "",
       active:
-        "Clicking a cited figure pops the underlying LFT listing rows next to §12.4, so the writer verifies the number in place rather than copy-pasting between tools where transcription errors creep in.",
+        "The user can reopen the agent's reasoning trail at any time to audit its thinking. Clicking a data snippet or file opens the underlying source in a new tab, so medical writers can trace the specific data supporting each line of their narrative.",
       focus,
     };
   }
-  if (slide >= 33 && slide <= 37) {
+  if (slide === 31) {
     return {
-      title: "Cross-regulatory phrasing",
+      title: "Side-By-Side View",
       lead: "",
       active:
-        "On the follow-up turn, the agent reasons across FDA and EMA reference style to find phrasings each authority will accept in a single pass.",
+        "The user views the working doc and the source files side by side without leaving the doc. Useful for manually auditing the agent's thinking and for navigating between data sources in one pane.",
+      focus: "split-view",
+    };
+  }
+  if (slide === 32) {
+    return {
+      title: "Back to the doc",
+      lead: "",
+      active:
+        "The user closes the evidence view and returns to the working doc. The verified narrative stays in place with its citations attached.",
+      focus: "editor-narrative",
+    };
+  }
+  if (slide === 33) {
+    return {
+      title: "Follow-up prompt",
+      lead: "",
+      active:
+        "The user prompts the agent to generate a statement on resolution time. The agent responds with its rationale before drafting either version.",
       focus: "copilot-thread",
     };
   }
-  if (slide === 38) {
+  if (slide >= 34 && slide <= 36) {
     return {
-      title: "Cross-regulatory phrasing",
+      title: "Agent reasoning",
       lead: "",
       active:
-        "The agent drafts the §12.4 resolution-time statement in both FDA and EMA phrasing from one factual basis, so the two submissions don't drift apart through separate writer passes.",
-      focus: "tertiary-wording",
+        "While pulling the resolution-time data, the agent notices FDA and EMA reference styles phrase the same fact differently. It surfaces the divergence to the user before drafting either version.",
+      focus: "copilot-thread",
     };
   }
-  if (slide === 39) {
+  if (slide >= 37 && slide <= 39) {
+    const focus: WalkthroughFocus =
+      slide === 37 ? "copilot-thread" : "tertiary-wording";
     return {
-      title: "Cross-regulatory phrasing",
+      title: "FDA vs EMA Diff Analysis",
       lead: "",
       active:
-        "Same fact rendered in two phrasings labeled FDA and EMA, so the writer picks once and both submissions stay locked to the same underlying data with regulator-appropriate language.",
-      focus: "tertiary-wording",
+        "In-line FDA vs EMA diff analysis. The user gets immediate insight into how the same narrative differs between health authorities (phrasing, data emphasis, argument) from a single source, and compares them without leaving the doc.",
+      focus,
     };
   }
   if (slide === 40) {
     return {
-      title: "Cross-regulatory phrasing",
+      title: "FDA vs EMA Diff Analysis",
       lead: "",
       active:
-        "The chosen EMA wording lands in §12.4 with the agent's audit trail intact, so QA can defend the number with one chain back to the source instead of stitching together emails and SAS outputs.",
+        "The chosen EMA wording lands in §12.4 with the agent's audit trail intact. QA can defend the number with one chain back to the source rather than stitching together emails and SAS outputs.",
       focus: "editor-tertiary",
     };
   }
