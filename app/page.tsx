@@ -1426,7 +1426,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Opening prompt",
       lead: "",
       active:
-        "The medical writer types a prompt while drafting the CSR. The agent thinks first, then asks back, before it writes anything.",
+        "The medical writer types a prompt, and the agent reasons first and asks back before writing, so the writer doesn't burn an hour on a draft built on the wrong assumption.",
       focus: "copilot-thread",
     };
   }
@@ -1435,7 +1435,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Clarifying questions",
       lead: "",
       active:
-        "The agent asks a few short follow-ups to pin down what the writer actually wants. Less work than re-prompting, and the writer lands on the narrative they had in mind without bouncing off three bad drafts first.",
+        "The agent asks two or three short follow-ups to pin down the writer's intent, cutting the three-bad-drafts cycle that sinks Grade 3 safety framing down to one good draft.",
       focus: "copilot-clarify",
     };
   }
@@ -1444,7 +1444,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Reasoning steps",
       lead: "",
       active:
-        "The agent shows its reasoning with the exact sources cited (LFT rows, protocol section, prior-phase CSR). The writer can audit each claim before signing off.",
+        "The agent shows its reasoning with the exact sources cited (LFT rows, protocol section, prior-phase CSR), so the writer audits each claim against raw data and no number comes back six months later as a regulator request nobody can trace.",
       focus: "copilot-reasoning",
     };
   }
@@ -1453,7 +1453,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Suggested narratives",
       lead: "",
       active:
-        "The agent drafts three framings of §12.4 side-by-side. The writer compares before picking one.",
+        "The agent drafts three framings of §12.4 side-by-side so the writer can catch subtle bias that wouldn't surface reading one draft at a time.",
       focus: "copilot-reasoning",
     };
   }
@@ -1462,7 +1462,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Suggested narratives",
       lead: "",
       active:
-        "Three takes on the same narrative: conservative, direct, comparative. The writer picks the one closest to what they had in mind. No redrafting from scratch.",
+        "Three takes on the same narrative (conservative, direct, comparative) collapse a three-day rewrite cycle into a one-day pick of the closest fit to the sponsor's voice.",
       focus: "copilot-narrative-preview",
     };
   }
@@ -1481,7 +1481,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Paper trail",
       lead: "",
       active:
-        "Clicking a cited figure pops the underlying LFT listing rows next to §12.4. The writer checks the source in place without leaving the draft.",
+        "Clicking a cited figure pops the underlying LFT listing rows next to §12.4, killing the copy-paste between tools that lands as transcription errors in QA later.",
       focus,
     };
   }
@@ -1490,7 +1490,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Cross-regulatory phrasing",
       lead: "",
       active:
-        "Follow-up turn. The agent reasons across regulatory references to find phrasings that match each authority's house style.",
+        "On the follow-up turn, the agent reasons across FDA and EMA reference style to find phrasings each authority will accept, sparing the dual-submission cost of two parallel writer passes.",
       focus: "copilot-thread",
     };
   }
@@ -1499,7 +1499,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Cross-regulatory phrasing",
       lead: "",
       active:
-        "The agent drafts the §12.4 resolution-time statement in both FDA and EMA phrasing.",
+        "The agent drafts the §12.4 resolution-time statement in both FDA and EMA phrasing in one pass, ending the routine where two writers produce slightly different facts six weeks apart.",
       focus: "tertiary-wording",
     };
   }
@@ -1508,7 +1508,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Cross-regulatory phrasing",
       lead: "",
       active:
-        "Same fact, two phrasings labeled FDA and EMA. The writer picks one and skips the manual translation between regulators.",
+        "Same fact rendered in two phrasings labeled FDA and EMA, so the writer picks once and both submissions stay locked to the same data with regulator-appropriate language.",
       focus: "tertiary-wording",
     };
   }
@@ -1517,7 +1517,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Cross-regulatory phrasing",
       lead: "",
       active:
-        "The chosen EMA wording drops into §12.4, and the agent keeps the audit trail intact.",
+        "The chosen EMA wording lands in §12.4 with the agent's audit trail intact, so QA defends the number with one chain instead of stitching together emails and SAS outputs.",
       focus: "editor-tertiary",
     };
   }
@@ -1526,7 +1526,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       title: "Traceability graph",
       lead: "",
       active:
-        "A relational graph of source listings, protocol sections, and roll-up modules. The writer navigates the audit trail by data flow rather than folder hierarchy.",
+        "A relational graph of source listings, protocol sections, and roll-up modules surfaces every Module 2.5 / 2.7 summary that quotes a §12.4 change, sparing the manual ripple-tracing.",
       focus: slide === 40 ? "trace-graph" : "protocol-doc",
     };
   }
