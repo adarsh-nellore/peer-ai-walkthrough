@@ -112,7 +112,8 @@ type WalkthroughFocus =
   | "split-view"
   | "tertiary-wording"
   | "trace-graph"
-  | "protocol-doc";
+  | "protocol-doc"
+  | "map-button";
 
 type Walkthrough = {
   /** Feature name shown as a small kicker above the body text. */
@@ -356,6 +357,37 @@ const frames: Frame[] = [
     placeholder: "Type here…",
     avatar: "outline",
     preparingNarrative: true,
+  },
+  {
+    id: "HBA-0",
+    messages: [
+      { role: "user", time: "14:03", text: "Re-draft the §12.4 hepatic AE narrative." },
+      {
+        role: "assistant",
+        time: "14:03",
+        summary: ["Magnitude", "Subgroup table", "Phase 2 inline"],
+      },
+    ],
+    input: "",
+    placeholder: "Type here…",
+    avatar: "outline",
+    preparingNarrative: true,
+    steps: [
+      {
+        title: "Reading Phase 2 hepatic AE baseline...",
+        step: "step 1 of 4",
+        done: false,
+        highlight: true,
+        file: { badge: "md", fileName: "Phase2-CSR-007.md", section: "§5.2" },
+        body: {
+          kind: "narrative",
+          sectionLabel: "§5.2",
+          sectionTitle: "Hepatic AE baseline · Phase 2",
+          body: "Phase 2 enrolled 237 participants on Aurora-IV with hepatic monitoring at screening, week 4, and end of cycle. Grade 1–2 transient ALT elevations occurred in 7.6% (n=18/237); a single Grade 3 DILI case (n=1/237) resolved on discontinuation. No Hy's Law cases were observed.",
+          footerText: "n = 237 · cycle 1",
+        },
+      },
+    ],
   },
   {
     id: "HBZ-0",
@@ -1349,6 +1381,43 @@ const frames: Frame[] = [
     tertiaryAcceptedChip: { label: "Accepted · EMA wording", revisit: true },
   },
   {
+    id: "PO8-0",
+    messages: [
+      { role: "user", time: "14:03", text: "Re-draft the §12.4 hepatic AE narrative." },
+      {
+        role: "assistant",
+        time: "14:03",
+        summary: ["Magnitude", "Subgroup table", "Phase 2 inline"],
+      },
+    ],
+    input: "",
+    placeholder: "Type here…",
+    avatar: "outline",
+    tabDirty: true,
+    hideGrade3: true,
+    narrativeBody:
+      "The hepatic AE rate in Aurora-IV (8.2%; n=49/598) tracks the Phase 2 finding (7.6%; n=18/237 in Phase2-CSR-007 §5.2), suggesting a stable safety profile across studies. Two Grade 3 events met DILI criteria; both resolved on discontinuation. No Hy's Law cases were observed.",
+    tertiaryDocParagraph:
+      "Most events resolved within a median of 21 days, consistent with the 14–28 day pharmacovigilance window.",
+    reasonedChip: { label: "Reasoned · 6 steps · 12s" },
+    acceptedChip: { label: "Accepted · v3 comparative", revisit: true },
+    secondaryMessages: [
+      { role: "user", time: "14:03", text: "Add a statement on resolution time." },
+      { role: "assistant", time: "14:03" },
+    ],
+    secondarySteps: [
+      {
+        title: "Pulled resolution time data",
+        step: "",
+        done: true,
+        file: { badge: "csv", badgeStyle: "csv", fileName: "Phase3-LFT-Listings.csv" },
+      },
+    ],
+    tertiaryText:
+      "Writing the statement. While cross-checking, I noticed FDA and EMA phrase resolution time slightly differently. Which would you like to use?",
+    tertiaryAcceptedChip: { label: "Accepted · EMA wording", revisit: true },
+  },
+  {
     id: "PTV-0",
     layout: "trace-map",
     messages: [
@@ -1439,7 +1508,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-clarify",
     };
   }
-  if (slide >= 14 && slide <= 21) {
+  if (slide >= 14 && slide <= 22) {
     return {
       title: "Reasoning steps",
       lead: "",
@@ -1448,7 +1517,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-reasoning",
     };
   }
-  if (slide === 22) {
+  if (slide === 23) {
     return {
       title: "Suggested narratives",
       lead: "",
@@ -1457,7 +1526,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-reasoning",
     };
   }
-  if (slide >= 23 && slide <= 26) {
+  if (slide >= 24 && slide <= 27) {
     return {
       title: "Suggested narratives",
       lead: "",
@@ -1466,15 +1535,15 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-narrative-preview",
     };
   }
-  if (slide >= 27 && slide <= 31) {
+  if (slide >= 28 && slide <= 32) {
     const focus: WalkthroughFocus =
-      slide === 27
+      slide === 28
         ? "editor-narrative"
-        : slide === 28
-        ? "copilot-reasoning"
         : slide === 29
-        ? "evidence-csv"
+        ? "copilot-reasoning"
         : slide === 30
+        ? "evidence-csv"
+        : slide === 31
         ? "split-view"
         : "editor-narrative";
     return {
@@ -1485,7 +1554,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus,
     };
   }
-  if (slide >= 32 && slide <= 36) {
+  if (slide >= 33 && slide <= 37) {
     return {
       title: "Cross-regulatory phrasing",
       lead: "",
@@ -1494,7 +1563,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-thread",
     };
   }
-  if (slide === 37) {
+  if (slide === 38) {
     return {
       title: "Cross-regulatory phrasing",
       lead: "",
@@ -1503,7 +1572,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "tertiary-wording",
     };
   }
-  if (slide === 38) {
+  if (slide === 39) {
     return {
       title: "Cross-regulatory phrasing",
       lead: "",
@@ -1512,7 +1581,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "tertiary-wording",
     };
   }
-  if (slide === 39) {
+  if (slide === 40) {
     return {
       title: "Cross-regulatory phrasing",
       lead: "",
@@ -1521,13 +1590,22 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "editor-tertiary",
     };
   }
-  if (slide === 40 || slide === 41) {
+  if (slide === 41) {
+    return {
+      title: "Traceability graph",
+      lead: "",
+      active:
+        "Clicking the map icon in the editor opens the traceability graph: a relational view of every source listing, protocol section, and roll-up module that touches §12.4, so the writer can see what downstream documents will need to move with this edit.",
+      focus: "map-button",
+    };
+  }
+  if (slide === 42 || slide === 43) {
     return {
       title: "Traceability graph",
       lead: "",
       active:
         "A relational graph of source listings, protocol sections, and roll-up modules surfaces every Module 2.5 / 2.7 summary that quotes a §12.4 change, catching downstream inconsistencies without manual ripple-tracing.",
-      focus: slide === 40 ? "trace-graph" : "protocol-doc",
+      focus: slide === 42 ? "trace-graph" : "protocol-doc",
     };
   }
   return null;
@@ -1545,20 +1623,21 @@ function dwellMs(slide: number): number {
   if (slide >= 2 && slide <= 4) return 3200;
   if (slide === 5) return 3800;
   if (slide >= 6 && slide <= 13) return 3600;
-  if (slide >= 14 && slide <= 21) return 4200;
-  if (slide === 22) return 3200;
-  if (slide >= 23 && slide <= 26) return 5600;
-  if (slide === 27) return 3600;
-  if (slide === 28) return 4400;
-  if (slide === 29) return 4800;
-  if (slide === 30) return 6400;
-  if (slide === 31) return 3600;
-  if (slide >= 32 && slide <= 36) return 3600;
-  if (slide === 37) return 3200;
-  if (slide === 38) return 5600;
-  if (slide === 39) return 3600;
-  if (slide === 40) return 8400;
-  if (slide === 41) return 7000;
+  if (slide >= 14 && slide <= 22) return 4200;
+  if (slide === 23) return 3200;
+  if (slide >= 24 && slide <= 27) return 5600;
+  if (slide === 28) return 3600;
+  if (slide === 29) return 4400;
+  if (slide === 30) return 4800;
+  if (slide === 31) return 6400;
+  if (slide === 32) return 3600;
+  if (slide >= 33 && slide <= 37) return 3600;
+  if (slide === 38) return 3200;
+  if (slide === 39) return 5600;
+  if (slide === 40) return 3600;
+  if (slide === 41) return 3200;
+  if (slide === 42) return 8400;
+  if (slide === 43) return 7000;
   return 4200;
 }
 
@@ -1660,9 +1739,7 @@ export default function PaperFramePage() {
     clarifyCard: frame.clarifyCard,
     steps: frame.steps,
     tabDirty: frame.tabDirty ?? false,
-    // Slide 39 (index 38): show the map icon as pre-clicked right before the
-    // traceability modal opens on slide 40.
-    mapActive: index === 38,
+    mapActive: index === 40,
     hideGrade3: frame.hideGrade3 ?? false,
     narrativeDraft: frame.narrativeDraft,
     narrativeBody: frame.narrativeBody,
@@ -2035,6 +2112,7 @@ function CSRDocFrame({
   walkthrough,
 }: SharedFrameProps) {
   const chromeFocused = walkthrough?.focus === "chrome";
+  const mapFocused = walkthrough?.focus === "map-button";
   return (
     <div className="[font-synthesis:none] flex gap-3 w-full h-full min-h-0 bg-transparent antialiased text-xs/4 overflow-hidden">
       {/* Editor column */}
@@ -2043,7 +2121,7 @@ function CSRDocFrame({
         data-walkthrough-focus={chromeFocused ? "chrome" : undefined}
       >
         {/* Tab bar */}
-        <DocTabBar tabDirty={tabDirty} mapActive={mapActive} />
+        <DocTabBar tabDirty={tabDirty} mapActive={mapActive} mapFocused={mapFocused} />
 
         {/* Doc body */}
         <CSRDocBody
@@ -2391,12 +2469,29 @@ function TopNav({ avatar }: { avatar: "solid" | "outline" }) {
   );
 }
 
-function DocTabBar({ tabDirty, mapActive = false }: { tabDirty: boolean; mapActive?: boolean }) {
+function DocTabBar({
+  tabDirty,
+  mapActive = false,
+  mapFocused = false,
+}: {
+  tabDirty: boolean;
+  mapActive?: boolean;
+  mapFocused?: boolean;
+}) {
   return (
     <div className="flex items-end h-12 shrink-0 px-4 gap-1 border-b border-hairline">
       <Tab kind="md" name="CSR-014.md" state={tabDirty ? "active-dirty" : "active-default"} />
       <div className="grow" />
-      <MapButton active={mapActive} />
+      {mapFocused ? (
+        <div
+          className="relative walkthrough-spotlight rounded-[8px]"
+          data-walkthrough-focus="map-button"
+        >
+          <MapButton active={mapActive} />
+        </div>
+      ) : (
+        <MapButton active={mapActive} />
+      )}
     </div>
   );
 }
@@ -4129,7 +4224,7 @@ function StepBodyCsv({
             {row.values.map((v, vi) => {
               const isOutcome = vi === row.values.length - 1;
               const align = vi === 0 || vi === 1 ? "" : "text-right";
-              const accent = row.outcomeAccent && isOutcome ? "font-bold text-pink-ink" : "text-ink";
+              const accent = row.outcomeAccent && isOutcome ? "font-bold text-pink-ink" : "text-muted";
               const muted = row.outcomeAccent && isOutcome ? false : isOutcome;
               return (
                 <div
@@ -4175,7 +4270,7 @@ function StepBodyNarrative({
         </div>
       </div>
       <div className="px-3 pb-2.5">
-        <div className="font-[var(--font-inter)] text-ink text-[12px] leading-[155%]">
+        <div className="font-[var(--font-inter)] text-muted text-[12px] leading-[155%]">
           {body.body}
         </div>
       </div>
@@ -4186,7 +4281,7 @@ function StepBodyNarrative({
               <div className="font-[var(--font-inconsolata)] text-faint text-[10px] leading-[14px] tracking-[0.04em] uppercase whitespace-nowrap">
                 {d.term}
               </div>
-              <div className="font-[var(--font-inter)] text-ink text-[11.5px] leading-[155%]">
+              <div className="font-[var(--font-inter)] text-muted text-[11.5px] leading-[155%]">
                 {d.def}
               </div>
             </Fragment>
