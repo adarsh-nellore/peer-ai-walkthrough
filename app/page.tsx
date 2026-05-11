@@ -1526,7 +1526,7 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-reasoning",
     };
   }
-  if (slide >= 24 && slide <= 27) {
+  if (slide >= 24 && slide <= 26) {
     return {
       title: "Suggested narratives",
       lead: "",
@@ -1535,11 +1535,9 @@ function walkthroughForSlideIndex(index: number): Walkthrough | null {
       focus: "copilot-narrative-preview",
     };
   }
-  if (slide >= 28 && slide <= 32) {
+  if (slide >= 27 && slide <= 32) {
     const focus: WalkthroughFocus =
-      slide === 28
-        ? "editor-narrative"
-        : slide === 29
+      slide === 29
         ? "copilot-reasoning"
         : slide === 30
         ? "evidence-csv"
@@ -1625,7 +1623,8 @@ function dwellMs(slide: number): number {
   if (slide >= 6 && slide <= 13) return 3600;
   if (slide >= 14 && slide <= 22) return 4200;
   if (slide === 23) return 3200;
-  if (slide >= 24 && slide <= 27) return 5600;
+  if (slide >= 24 && slide <= 26) return 5600;
+  if (slide === 27) return 3600;
   if (slide === 28) return 3600;
   if (slide === 29) return 4400;
   if (slide === 30) return 4800;
