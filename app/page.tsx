@@ -1929,20 +1929,20 @@ export default function PaperFramePage() {
 function CoverScreen({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center px-6">
-      <div className="flex flex-col items-center text-center max-w-[760px] gap-6">
-        <h1 className="font-[var(--font-display)] text-ink text-[42px] leading-[110%] tracking-[-0.02em] whitespace-nowrap">
+      <div className="flex flex-col items-center text-center w-full max-w-full md:max-w-[760px] gap-5 md:gap-6">
+        <h1 className="font-[var(--font-display)] text-ink text-[28px] md:text-[42px] leading-[115%] md:leading-[110%] tracking-[-0.02em] whitespace-normal md:whitespace-nowrap">
           Peer AI <span className="text-faint">·</span> Potential Design Patterns
         </h1>
-        <div className="font-[var(--font-inconsolata)] text-coral text-[12px] tracking-[0.18em] uppercase">
+        <div className="font-[var(--font-inconsolata)] text-coral text-[11px] md:text-[12px] tracking-[0.18em] uppercase">
           by Adarsh Nellore
         </div>
-        <p className="font-[var(--font-inter)] text-muted text-[16px] leading-[160%] max-w-[560px] mt-1">
+        <p className="font-[var(--font-inter)] text-muted text-[14px] md:text-[16px] leading-[160%] max-w-full md:max-w-[560px] mt-1">
           Unsolicited design explorations on what AI-assisted medical writing
           could look like. Each beat traces a specific UX pattern, agent
           interaction, or human-in-the-loop moment that would sharpen the
           writer&apos;s flow.
         </p>
-        <div className="flex items-center gap-2.5 mt-2 font-[var(--font-inconsolata)] text-faint text-[11px] tracking-[0.08em] uppercase">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 mt-2 font-[var(--font-inconsolata)] text-faint text-[11px] tracking-[0.08em] uppercase">
           <KeyChip label="←" />
           <KeyChip label="→" />
           <span>navigate with arrow keys</span>
@@ -1950,7 +1950,7 @@ function CoverScreen({ onBegin }: { onBegin: () => void }) {
         <button
           type="button"
           onClick={onBegin}
-          className="mt-3 inline-flex items-center gap-2 rounded-full bg-coral text-white px-6 py-3 font-[var(--font-inter)] font-medium text-[14px] leading-[18px] tracking-[-0.005em] shadow-pop hover:opacity-95 transition-opacity cursor-pointer"
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-coral text-white px-5 py-2.5 md:px-6 md:py-3 font-[var(--font-inter)] font-medium text-[14px] leading-[18px] tracking-[-0.005em] shadow-pop hover:opacity-95 transition-opacity cursor-pointer"
         >
           Begin
           <span aria-hidden>→</span>
